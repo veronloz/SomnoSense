@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="24dp"
+    android:background="?android:attr/windowBackground"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Estado de conexión -->
+    <TextView
+        android:id="@+id/statusText"
+        android:text="🔵 Esperando conexión BLE..."
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        android:gravity="center"
+        android:layout_marginBottom="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Botón de escaneo -->
+    <Button
+        android:id="@+id/scanButton"
+        android:text="🔍 Buscar dispositivo BLE"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:paddingVertical="12dp"
+        android:textSize="16sp"
+        android:textAllCaps="false" />
+
+    <!-- Botón de conexión -->
+    <Button
+        android:id="@+id/connectButton"
+        android:text="🔗 Conectar al dispositivo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:paddingVertical="12dp"
+        android:textSize="16sp"
+        android:textAllCaps="false"
+        android:enabled="false" />
+
+    <!-- Área de datos -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="?android:attr/colorBackgroundFloating"
+        android:elevation="2dp"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/dataText"
+            android:text="📊 Los datos del sensor aparecerán aquí..."
+            android:textSize="15sp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:lineSpacingExtra="4dp" />
+
+    </ScrollView>
+
+</LinearLayout>
