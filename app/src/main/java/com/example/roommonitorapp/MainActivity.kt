@@ -23,9 +23,17 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.FirebaseApp
+import com.google.firebase.database.FirebaseDatabase
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
+
+// Firebase reference
+//private val firebaseDB = FirebaseDatabase.getInstance().getReference("somnosense/data")
+private val firebaseDB = FirebaseDatabase
+    .getInstance("https://somnosense-default-rtdb.europe-west1.firebasedatabase.app/")
+    .getReference("somnosense/data")
 
 class MainActivity : AppCompatActivity() {
 
@@ -67,10 +75,66 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // ✅ Initialize Firebase
+        FirebaseApp.initializeApp(this)
+
         initializeViews()
         checkAndInitializeBluetooth()
         setupClickListeners()
+        // 🧪 TEMP: Start mock data since no device is connected
+        startMockSensorData()
     }
+
+    // ===========================================================
+// 🧪 MOCK DATA SECTION - TEMPORARY (DELETE LATER)
+// This simulates sensor data when the board is not available.
+// Remove all code between these markers when using the real device.
+// ===========================================================
+
+    private var mockTimer: Timer? = null
+
+    private fun startMockSensorData() {
+        mockTimer?.cancel()
+        mockTimer = Timer()
+
+        mockTimer?.scheduleAtFixedRate(object : TimerTask() {
+            override fun run() {
+                // Generate random fake data
+                temperature = (18..25).random() + Random().nextFloat()
+                humidity = (40..60).random() + Random().nextFloat()
+                gasLevel = (50..400).random()
+
+                val data = mapOf(
+                    "timestamp" to System.currentTimeMillis(),
+                    "temperature" to temperature,
+                    "humidity" to humidity,
+                    "gasLevel" to gasLevel,
+                    "deviceId" to "MOCK_DEVICE_001"
+                )
+
+                // 🔥 Send data to Firebase
+                firebaseDB.push().setValue(data)
+                    .addOnSuccessListener {
+                        Log.d(TAG, "✅ Data sent to Firebase successfully")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "❌ Failed to send data: ${e.message}")
+                    }
+
+                runOnUiThread { updateSensorDisplay() }
+                Log.d(TAG, "🧪 Mock data generated & sent: $data")
+            }
+        }, 0, 5000) // Every 5 seconds
+    }
+
+    private fun stopMockSensorData() {
+        mockTimer?.cancel()
+        mockTimer = null
+    }
+// ===========================================================
+// END OF MOCK DATA SECTION
+// ===========================================================
+
 
     private fun initializeViews() {
         statusText = findViewById(R.id.statusText)
@@ -714,6 +778,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // 🧪 Stop mock data when app closes
+        stopMockSensorData()
         stopSensorReadings()
         bluetoothGatt?.close()
         handler.removeCallbacksAndMessages(null)
