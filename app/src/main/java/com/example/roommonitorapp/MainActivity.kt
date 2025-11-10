@@ -43,24 +43,30 @@ class MainActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
 
-    // UUIDs para sensores ambientales (COMÚN en nRF52 - REEMPLAZA CON LOS DE TU PLACA)
-    private val ENVIRONMENTAL_SENSING_SERVICE = UUID.fromString("0000181a-0000-1000-8000-00805f9b34fb")
-    private val TEMPERATURE_CHARACTERISTIC = UUID.fromString("00002a6e-0000-1000-8000-00805f9b34fb")
-    private val HUMIDITY_CHARACTERISTIC = UUID.fromString("00002a6f-0000-1000-8000-00805f9b34fb")
-    private val GAS_SENSOR_SERVICE = UUID.fromString("0000181c-0000-1000-8000-00805f9b34fb") // Servicio personalizado
-    private val GAS_CHARACTERISTIC = UUID.fromString("00002b00-0000-1000-8000-00805f9b34fb") // Característica personalizada
+    // --- UUIDs actualizados para coincidir con tu main.c de Zephyr ---
+    // Servicio: "GasSensorSvc" (47617353-656e-736f-7253-766300000000)
+    private val GAS_SENSOR_SERVICE_UUID = UUID.fromString("47617353-656e-736f-7253-766300000000")
+    // Característica: "GasReadings" (47617352-6561-6469-6e67-73000000000)
+    private val GAS_READINGS_CHARACTERISTIC_UUID = UUID.fromString("47617352-6561-6469-6e67-73000000000")
+    // UUID del Descriptor CCC (Client Characteristic Configuration)
+    private val CCC_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    // ---------------------------------------------------------------
 
-    // Variables para almacenar lecturas de sensores
-    private var temperature: Float = 0.0f
-    private var humidity: Float = 0.0f
-    private var gasLevel: Int = 0
+
+    // Variables para almacenar lecturas de gases
+    private var co: Float = 0.0f
+    private var no2: Float = 0.0f
+    private var nh3: Float = 0.0f
+    private var ch4: Float = 0.0f
+    private var etoh: Float = 0.0f
+
 
     private companion object {
         const val TAG = "RoomMonitor"
         const val PERMISSION_REQUEST_CODE = 100
         const val BLUETOOTH_REQUEST_CODE = 101
         const val SCAN_PERIOD: Long = 10000
-        const val READING_INTERVAL: Long = 2000 // Lecturas cada 2 segundos
+        // const val READING_INTERVAL: Long = 2000 // No es necesario, usaremos notificaciones
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -224,10 +230,12 @@ class MainActivity : AppCompatActivity() {
 
     // Callback para resultados BLE
     private val scanCallback = object : ScanCallback() {
+        @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             processScanResult(result)
         }
 
+        @SuppressLint("MissingPermission")
         override fun onBatchScanResults(results: MutableList<ScanResult>) {
             for (result in results) {
                 processScanResult(result)
@@ -248,6 +256,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        @SuppressLint("MissingPermission")
         private fun processScanResult(result: ScanResult) {
             val device = result.device
             val deviceName = device.name ?: "Sin nombre"
@@ -297,7 +306,7 @@ class MainActivity : AppCompatActivity() {
 
         // Conectar al dispositivo
         bluetoothGatt = device.connectGatt(this, false, gattCallback)
-        Toast.makeText(this, "Conectando a: ${device.name ?: "Sensor Ambiental"}", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "Conectando a: ${device.name ?: "Sensor de Gas"}", Toast.LENGTH_LONG).show()
         Log.d(TAG, "Iniciando conexión GATT con: ${device.address}")
     }
 
@@ -329,7 +338,7 @@ class MainActivity : AppCompatActivity() {
                         connectButton.isEnabled = true
                     }
                     isConnected = false
-                    stopSensorReadings()
+                    // stopSensorReadings() // No es necesario
                     bluetoothGatt?.close()
                     bluetoothGatt = null
                 }
@@ -341,7 +350,7 @@ class MainActivity : AppCompatActivity() {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 runOnUiThread {
-                    statusText.text = "✅ Conectado - Configurando sensores"
+                    statusText.text = "✅ Conectado - Configurando sensor"
                 }
 
                 // Configurar lecturas de sensores
@@ -367,57 +376,48 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-            // Datos en tiempo real vía notificaciones
+            // Datos en tiempo real vía notificaciones (¡esto es lo que queremos!)
             processSensorData(characteristic)
+        }
+
+        override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.d(TAG, "Descriptor CCC escrito, notificaciones habilitadas")
+                runOnUiThread {
+                    statusText.text = "✅ Sensor configurado. Recibiendo datos..."
+                }
+            } else {
+                Log.e(TAG, "Error al escribir descriptor CCC: $status")
+            }
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun setupSensorReadings(gatt: BluetoothGatt) {
-        var sensorsFound = 0
+        val gasService = gatt.getService(GAS_SENSOR_SERVICE_UUID)
+        val gasChar = gasService?.getCharacteristic(GAS_READINGS_CHARACTERISTIC_UUID)
 
-        // Configurar temperatura
-        val tempService = gatt.getService(ENVIRONMENTAL_SENSING_SERVICE)
-        val tempChar = tempService?.getCharacteristic(TEMPERATURE_CHARACTERISTIC)
-        if (tempChar != null) {
-            // Habilitar notificaciones
-            gatt.setCharacteristicNotification(tempChar, true)
-            // Leer valor inicial
-            gatt.readCharacteristic(tempChar)
-            sensorsFound++
-            Log.d(TAG, "Sensor de temperatura configurado")
-        } else {
-            Log.w(TAG, "Sensor de temperatura NO encontrado")
-        }
-
-        // Configurar humedad
-        val humidityChar = tempService?.getCharacteristic(HUMIDITY_CHARACTERISTIC)
-        if (humidityChar != null) {
-            gatt.setCharacteristicNotification(humidityChar, true)
-            gatt.readCharacteristic(humidityChar)
-            sensorsFound++
-            Log.d(TAG, "Sensor de humedad configurado")
-        } else {
-            Log.w(TAG, "Sensor de humedad NO encontrado")
-        }
-
-        // Configurar sensor de gas (servicio personalizado)
-        val gasService = gatt.getService(GAS_SENSOR_SERVICE)
-        val gasChar = gasService?.getCharacteristic(GAS_CHARACTERISTIC)
         if (gasChar != null) {
+            // 1. Habilitar notificaciones localmente
             gatt.setCharacteristicNotification(gasChar, true)
-            gatt.readCharacteristic(gasChar)
-            sensorsFound++
-            Log.d(TAG, "Sensor de gas configurado")
-        } else {
-            Log.w(TAG, "Sensor de gas NO encontrado")
-        }
 
-        runOnUiThread {
-            if (sensorsFound > 0) {
-                statusText.text = "✅ $sensorsFound sensores configurados"
-                startContinuousReadings()
+            // 2. Escribir en el descriptor CCC para habilitar notificaciones en el dispositivo
+            val cccDescriptor = gasChar.getDescriptor(CCC_DESCRIPTOR_UUID)
+            if (cccDescriptor != null) {
+                cccDescriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                gatt.writeDescriptor(cccDescriptor)
+                Log.d(TAG, "Habilitando notificaciones para Gas Readings...")
             } else {
+                Log.w(TAG, "No se encontró el descriptor CCC")
+            }
+
+            // Opcional: Leer el valor inicial
+            gatt.readCharacteristic(gasChar)
+            Log.d(TAG, "Sensor de gas configurado")
+
+        } else {
+            Log.w(TAG, "Sensor de gas (Servicio o Característica) NO encontrado")
+            runOnUiThread {
                 statusText.text = "⚠️ No se encontraron sensores conocidos"
                 dataText.text = "No se encontraron los sensores esperados.\n\n" +
                         "Mostrando todos los servicios disponibles para debugging:"
@@ -459,17 +459,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun processSensorData(characteristic: BluetoothGattCharacteristic) {
         when (characteristic.uuid) {
-            TEMPERATURE_CHARACTERISTIC -> {
-                temperature = parseTemperatureData(characteristic.value)
-                Log.d(TAG, "Temperatura leída: $temperature °C")
-            }
-            HUMIDITY_CHARACTERISTIC -> {
-                humidity = parseHumidityData(characteristic.value)
-                Log.d(TAG, "Humedad leída: $humidity %")
-            }
-            GAS_CHARACTERISTIC -> {
-                gasLevel = parseGasData(characteristic.value)
-                Log.d(TAG, "Gas leído: $gasLevel")
+            GAS_READINGS_CHARACTERISTIC_UUID -> {
+                parseGasData(characteristic.value)
+                Log.d(TAG, "Datos de gas recibidos")
             }
             else -> {
                 Log.d(TAG, "Datos de característica desconocida: ${characteristic.uuid}")
@@ -481,87 +473,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun parseTemperatureData(data: ByteArray?): Float {
-        if (data == null || data.size < 2) return 0.0f
+    private fun parseGasData(data: ByteArray?) {
+        // Tu main.c envía 5 floats (5 * 4 bytes = 20 bytes)
+        if (data == null || data.size < 20) {
+            Log.w(TAG, "Datos de gas inválidos, tamaño: ${data?.size}")
+            return
+        }
 
         try {
-            // Formato común: 2 bytes signed, unidades de 0.01°C
+            // El buffer debe estar en Little Endian, como en tu nRF52
             val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
-            return buffer.short.toFloat() / 100.0f
+            co = buffer.float
+            no2 = buffer.float
+            nh3 = buffer.float
+            ch4 = buffer.float
+            etoh = buffer.float
+
+            Log.d(TAG, "Parseado: CO=$co, NO2=$no2, NH3=$nh3, CH4=$ch4, EtOH=$etoh")
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error parseando temperatura: ${e.message}")
-            return 0.0f
+            Log.e(TAG, "Error parseando datos de gas: ${e.message}")
         }
-    }
-
-    private fun parseHumidityData(data: ByteArray?): Float {
-        if (data == null || data.size < 2) return 0.0f
-
-        try {
-            // Formato común: 2 bytes unsigned, unidades de 0.01%
-            val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
-            return (buffer.short.toInt() and 0xFFFF).toFloat() / 100.0f
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parseando humedad: ${e.message}")
-            return 0.0f
-        }
-    }
-
-    private fun parseGasData(data: ByteArray?): Int {
-        if (data == null || data.isEmpty()) return 0
-
-        try {
-            // Depende de tu sensor específico - comúnmente 1-4 bytes
-            return when (data.size) {
-                1 -> data[0].toInt() and 0xFF
-                2 -> ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).short.toInt() and 0xFFFF
-                4 -> ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).int
-                else -> 0
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parseando gas: ${e.message}")
-            return 0
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun startContinuousReadings() {
-        handler.postDelayed(object : Runnable {
-            override fun run() {
-                if (isConnected && bluetoothGatt != null) {
-                    // Leer todos los sensores periódicamente
-                    bluetoothGatt?.let { gatt ->
-                        val tempService = gatt.getService(ENVIRONMENTAL_SENSING_SERVICE)
-                        tempService?.getCharacteristic(TEMPERATURE_CHARACTERISTIC)?.let {
-                            gatt.readCharacteristic(it)
-                        }
-                        tempService?.getCharacteristic(HUMIDITY_CHARACTERISTIC)?.let {
-                            gatt.readCharacteristic(it)
-                        }
-                        val gasService = gatt.getService(GAS_SENSOR_SERVICE)
-                        gasService?.getCharacteristic(GAS_CHARACTERISTIC)?.let {
-                            gatt.readCharacteristic(it)
-                        }
-                    }
-                    handler.postDelayed(this, READING_INTERVAL)
-                }
-            }
-        }, READING_INTERVAL)
-    }
-
-    private fun stopSensorReadings() {
-        handler.removeCallbacksAndMessages(null)
     }
 
     private fun updateSensorDisplay() {
+        // Mostrar los 5 valores de gas
         val sensorText = """
-            🌡️ MONITOR AMBIENTAL 🌡️
+            ⛽ MONITOR DE GAS (nRF52) ⛽
             
-            Temperatura: ${"%.1f".format(temperature)} °C
-            Humedad: ${"%.1f".format(humidity)} %
-            Nivel de Gas: $gasLevel
-            
-            ${getAirQuality(gasLevel)}
+            CO:     ${"%.2f".format(co)} ppm
+            NO2:    ${"%.2f".format(no2)} ppm
+            NH3:    ${"%.2f".format(nh3)} ppm
+            CH4:    ${"%.2f".format(ch4)} ppm
+            C2H5OH: ${"%.2f".format(etoh)} ppm
             
             Estado: ${if (isConnected) "✅ Conectado" else "❌ Desconectado"}
         """.trimIndent()
@@ -569,14 +513,6 @@ class MainActivity : AppCompatActivity() {
         dataText.text = sensorText
     }
 
-    private fun getAirQuality(gasLevel: Int): String {
-        return when {
-            gasLevel < 100 -> "✅ Calidad del aire: Excelente"
-            gasLevel < 300 -> "⚠️ Calidad del aire: Buena"
-            gasLevel < 500 -> "🔶 Calidad del aire: Regular"
-            else -> "🔴 Calidad del aire: Mala"
-        }
-    }
 
     @SuppressLint("MissingPermission")
     private fun disconnectDevice() {
@@ -584,7 +520,7 @@ class MainActivity : AppCompatActivity() {
         statusText.text = "🔌 Desconectando..."
         connectButton.isEnabled = false
 
-        stopSensorReadings()
+        // stopSensorReadings() // No es necesario
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
@@ -597,6 +533,8 @@ class MainActivity : AppCompatActivity() {
             connectButton.isEnabled = true
         }
     }
+
+    // --- El resto del código de permisos y ciclo de vida (sin cambios) ---
 
     // Verificar permisos
     private fun hasAllRequiredPermissions(): Boolean {
@@ -714,7 +652,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopSensorReadings()
+        // stopSensorReadings() // No es necesario
         bluetoothGatt?.close()
         handler.removeCallbacksAndMessages(null)
         Log.d(TAG, "App destruida")
