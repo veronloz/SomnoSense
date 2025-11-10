@@ -1,2 +1,12 @@
-# Project exclude paths
-/.gradle/
+# Gradle
+.gradle/
+build/
+
+# Android Studio
+.idea/
+
+# Local configuration
+local.properties
+
+# Firebase config (important!)
+app/google-services.json
