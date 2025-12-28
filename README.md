@@ -1,6 +1,6 @@
 # SomnoSense: a room monitoring app 📱🌡️
 
-A comprehensive Android application for monitoring environmental conditions using Bluetooth Low Energy (BLE) sensors. The app connects to nRF52480-based devices to read and display real-time temperature, humidity, and gas level data with an intuitive interface.
+A comprehensive Android application for monitoring environmental conditions using Bluetooth Low Energy (BLE) sensors. The app connects to nRF52480-based devices to read and display real-time temperature, humidity, and gas level data with an intuitive interface. 
 
 ## Features ✨
 
