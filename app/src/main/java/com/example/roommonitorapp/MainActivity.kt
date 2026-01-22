@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
                 disconnectDevice()
             } else {
                 selectedDevice?.let { device ->
-                    connectToDevice(device)
+                    connectToDevice(device) // 3. Conectar
                 } ?: run {
                     Toast.makeText(this, "Primero escanea y encuentra dispositivos", Toast.LENGTH_SHORT).show()
                 }
@@ -97,7 +97,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             enableBluetooth()
             return
         }
-
+        // 1. Escanear dispositivos
         bluetoothManager.startScan()
         statusText.text = "🔍 Escaneando BLE..."
         scanButton.text = "🛑 Detener Escaneo"
@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         isUsingMockData = true
     }
 
-    // BluetoothListener callbacks
+    // 2. Mostrar dispositivos encontrados
     override fun onDevicesFound(devices: List<BluetoothDevice>) {
         runOnUiThread {
             val currentText = dataText.text.toString()
@@ -170,7 +170,8 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         }
     }
 
-    override fun onSensorDataUpdated(temperature: Float, humidity: Float, gasLevel: Int) {
+    // 4. Recibir datos reales
+        override fun onSensorDataUpdated(temperature: Float, humidity: Float, gasLevel: Int) {
         this.temperature = temperature
         this.humidity = humidity
         this.gasLevel = gasLevel
