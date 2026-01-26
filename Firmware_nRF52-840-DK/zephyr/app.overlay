@@ -1,0 +1,25 @@
+/* Create a new node compatible with the DHT driver and map the alias
+ * `dht11` to it. This avoids conflicting with the board's default dht11
+ * node (which may have a different compatible string like worldsemi,dht11).
+ */
+dht11_aosong0: dht11_aosong {
+    compatible = "aosong,dht";
+    label = "DHT11";
+    status = "okay";
+    dio-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>; /* DATA pin is connected to P0.11 */
+};
+
+aliases {
+    dht11 = &dht11_aosong0;
+};
+
+&i2c0 {
+    status = "okay";
+    scl-pin = <29>;
+    sda-pin = <28>;
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+    gas_sensor: gas_sensor@4 {
+        compatible = "seeed,multichannel-gas";
+        reg = <0x04>;
+    };
+};

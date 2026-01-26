@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "modules/tflite-micro",
+		"source" : "C:/Users/eferr/.platformio/packages/framework-zephyr/modules/tflite-micro"
+	}
+}

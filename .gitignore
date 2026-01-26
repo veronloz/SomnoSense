@@ -1,0 +1,15 @@
+# Gradle
+AndroidApp/gradle/
+AndroidApp/build/
+
+# Android Studio
+AndroidApp.idea/
+
+# Local configuration
+local.properties
+
+# Firebase config (important!)
+app/google-services.json
+
+# .pio
+Firmware_nRF52-840-DK.pio/
