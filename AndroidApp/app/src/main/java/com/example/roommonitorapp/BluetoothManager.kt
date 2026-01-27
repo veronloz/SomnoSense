@@ -6,7 +6,6 @@ import android.bluetooth.le.*
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
@@ -16,7 +15,13 @@ class BluetoothManager(private val context: Context) {
     interface BluetoothListener {
         fun onDevicesFound(devices: List<BluetoothDevice>)
         fun onConnectionStateChanged(connected: Boolean, message: String)
-        fun onSensorDataUpdated(temperature: Float, humidity: Float, gasLevel: Int)
+        fun onGasDataUpdated(
+            co: Float,
+            no2: Float,
+            nh3: Float,
+            ch4: Float,
+            etoh: Float
+        )
         fun onError(message: String)
     }
 
@@ -35,7 +40,7 @@ class BluetoothManager(private val context: Context) {
     private var isConnected = false
     private var isScanning = false
 
-    // UUIDs
+    // UUIDs EXACTOS del firmware Zephyr
     private val SERVICE_UUID =
         UUID.fromString("47617353-656e-736f-7253-766300000000")
 
@@ -49,7 +54,6 @@ class BluetoothManager(private val context: Context) {
         this.listener = listener
     }
 
-    // 🔍 SCAN
     @SuppressLint("MissingPermission")
     fun startScan() {
         if (isScanning) return
@@ -65,7 +69,6 @@ class BluetoothManager(private val context: Context) {
         isScanning = false
     }
 
-    // 🔗 CONNECT
     @SuppressLint("MissingPermission")
     fun connectToDevice(device: BluetoothDevice) {
         gatt?.close()
@@ -82,7 +85,6 @@ class BluetoothManager(private val context: Context) {
         listener?.onConnectionStateChanged(false, "Desconectado")
     }
 
-    // 🔁 SCAN CALLBACK
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(type: Int, result: ScanResult) {
             if (foundDevices.add(result.device)) {
@@ -91,7 +93,6 @@ class BluetoothManager(private val context: Context) {
         }
     }
 
-    // 🔧 GATT CALLBACK
     private val gattCallback = object : BluetoothGattCallback() {
 
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
@@ -114,7 +115,6 @@ class BluetoothManager(private val context: Context) {
             }
 
             gatt.setCharacteristicNotification(characteristic, true)
-
             val cccd = characteristic.getDescriptor(CCCD_UUID)
             cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
             gatt.writeDescriptor(cccd)
@@ -130,7 +130,6 @@ class BluetoothManager(private val context: Context) {
         }
     }
 
-    // 📦 Parsear EXACTAMENTE los 5 floats del firmware
     private fun parseGasPacket(data: ByteArray?) {
         if (data == null || data.size < 20) return
 
@@ -142,12 +141,7 @@ class BluetoothManager(private val context: Context) {
         val ch4 = buffer.float
         val etoh = buffer.float
 
-        // En tu UI solo muestras 3 → elegimos los principales
-        listener?.onSensorDataUpdated(
-            temperature = co,
-            humidity = no2,
-            gasLevel = etoh.toInt()
-        )
+        listener?.onGasDataUpdated(co, no2, nh3, ch4, etoh)
     }
 
     fun isScanning() = isScanning

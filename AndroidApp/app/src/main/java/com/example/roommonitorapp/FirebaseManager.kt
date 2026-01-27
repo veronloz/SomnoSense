@@ -2,7 +2,6 @@ package com.example.roommonitorapp
 
 import android.util.Log
 import com.google.firebase.database.FirebaseDatabase
-import java.util.*
 
 class FirebaseManager {
 
@@ -10,58 +9,34 @@ class FirebaseManager {
         const val TAG = "FirebaseManager"
     }
 
-    // Firebase se inicializa automáticamente, no necesitas FirebaseApp.initializeApp()
+    // Base de datos explícita (mejor para labs)
     private val firebaseDB = FirebaseDatabase
         .getInstance("https://somnosense-default-rtdb.europe-west1.firebasedatabase.app/")
         .getReference("somnosense/data")
 
-    private var mockTimer: Timer? = null
-
-    // Ya no necesitas el método initialize() - Firebase se inicializa solo
-
-    fun sendSensorData(temperature: Float, humidity: Float, gasLevel: Int, deviceId: String = "REAL_DEVICE") {
+    fun sendGasData(
+        co: Float,
+        no2: Float,
+        nh3: Float,
+        ch4: Float,
+        etoh: Float
+    ) {
         val data = mapOf(
-            "timestamp" to System.currentTimeMillis(),
-            "temperature" to temperature,
-            "humidity" to humidity,
-            "gasLevel" to gasLevel,
-            "deviceId" to deviceId
+            "co" to co,
+            "no2" to no2,
+            "nh3" to nh3,
+            "ch4" to ch4,
+            "c2h5oh" to etoh,
+            "timestamp" to System.currentTimeMillis()
         )
 
-        firebaseDB.push().setValue(data)
+        firebaseDB.push()
+            .setValue(data)
             .addOnSuccessListener {
-                Log.d(TAG, "✅ Data sent to Firebase successfully")
+                Log.d(TAG, "Datos enviados correctamente a Firebase")
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "❌ Failed to send data: ${e.message}")
+                Log.e(TAG, "Error enviando datos a Firebase", e)
             }
-    }
-
-    // Mock data para pruebas
-    fun startMockData(callback: (Float, Float, Int) -> Unit) {
-        mockTimer?.cancel()
-        mockTimer = Timer()
-
-        mockTimer?.scheduleAtFixedRate(object : TimerTask() {
-            override fun run() {
-                val temperature = (18..25).random() + Random().nextFloat()
-                val humidity = (40..60).random() + Random().nextFloat()
-                val gasLevel = (50..400).random()
-
-                callback(temperature, humidity, gasLevel)
-                sendSensorData(temperature, humidity, gasLevel, "MOCK_DEVICE_001")
-                Log.d(TAG, "🧪 Mock data generated & sent")
-            }
-        }, 0, 5000) // Cada 5 segundos
-    }
-
-    fun stopMockData() {
-        mockTimer?.cancel()
-        mockTimer = null
-        Log.d(TAG, "Mock data stopped")
-    }
-
-    fun cleanup() {
-        stopMockData()
     }
 }
