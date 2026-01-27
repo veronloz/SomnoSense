@@ -49,8 +49,8 @@ A comprehensive Android application for monitoring environmental conditions usin
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/RoomMonitorApp.git
-   cd RoomMonitorApp
+   git clone https://github.com/your-username/SomnoSense.git
+   cd SomnoSense
    ```
 
 2. **Open Project in Android Studio**
