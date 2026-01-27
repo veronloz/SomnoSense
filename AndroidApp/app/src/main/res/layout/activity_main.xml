@@ -10,18 +10,16 @@
     <!-- Estado de conexión -->
     <TextView
         android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"
         android:text="🔵 Esperando conexión BLE..."
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
-        android:gravity="center"
-        android:layout_marginBottom="24dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:textColor="?android:attr/textColorPrimary" />
 
     <!-- Botón de escaneo -->
-
-    <!-- Botón de conexión -->
     <Button
         android:id="@+id/scanButton"
         android:layout_width="match_parent"
@@ -32,21 +30,22 @@
         android:textAllCaps="false"
         android:textSize="16sp" />
 
-    <!-- Área de datos -->
+    <!-- Botón de conexión -->
     <Button
         android:id="@+id/connectButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="16dp"
         android:enabled="false"
         android:paddingVertical="12dp"
         android:text="🔗 Conectar al dispositivo"
         android:textAllCaps="false"
         android:textSize="16sp" />
 
+    <!-- Área de datos -->
     <ScrollView
-        android:layout_width="370dp"
-        android:layout_height="364dp"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:background="?android:attr/colorBackgroundFloating"
         android:elevation="2dp"
@@ -63,16 +62,19 @@
             android:textSize="15sp" />
 
     </ScrollView>
+
     <!-- Botón Ver Histórico -->
     <Button
         android:id="@+id/btnHistory"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text=" Ver Historial"
+        android:padding="16dp"
+        android:text="VER HISTORIAL"
+        android:textAllCaps="false"
         android:textSize="16sp"
         android:textStyle="bold"
         android:backgroundTint="#4CAF50"
-        android:textColor="#FFFFFF"
-        android:padding="16dp" />
+        android:textColor="#FFFFFF" />
+
 </LinearLayout>

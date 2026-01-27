@@ -2,9 +2,7 @@ package com.example.roommonitorapp
 
 import android.annotation.SuppressLint
 import android.bluetooth.*
-import android.bluetooth.le.BluetoothLeScanner
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
+import android.bluetooth.le.*
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -15,7 +13,6 @@ import java.util.*
 
 class BluetoothManager(private val context: Context) {
 
-    // Callbacks para la Activity
     interface BluetoothListener {
         fun onDevicesFound(devices: List<BluetoothDevice>)
         fun onConnectionStateChanged(connected: Boolean, message: String)
@@ -24,279 +21,140 @@ class BluetoothManager(private val context: Context) {
     }
 
     private var listener: BluetoothListener? = null
-    private var bluetoothAdapter: BluetoothAdapter? = null
-    private var bleScanner: BluetoothLeScanner? = null
-    private var bluetoothGatt: BluetoothGatt? = null
 
-    private var isScanning = false
-    private var isConnected = false
+    private val btAdapter =
+        (context.getSystemService(Context.BLUETOOTH_SERVICE)
+                as android.bluetooth.BluetoothManager).adapter
+
+    private val bleScanner = btAdapter.bluetoothLeScanner
+    private var gatt: BluetoothGatt? = null
 
     private val handler = Handler(Looper.getMainLooper())
+    private val foundDevices = mutableSetOf<BluetoothDevice>()
 
-    // UUIDs para sensores - definidos como propiedades normales
-    private val ENVIRONMENTAL_SENSING_SERVICE = UUID.fromString("0000181a-0000-1000-8000-00805f9b34fb")
-    private val TEMPERATURE_CHARACTERISTIC = UUID.fromString("00002a6e-0000-1000-8000-00805f9b34fb")
-    private val HUMIDITY_CHARACTERISTIC = UUID.fromString("00002a6f-0000-1000-8000-00805f9b34fb")
-    private val GAS_SENSOR_SERVICE = UUID.fromString("0000181c-0000-1000-8000-00805f9b34fb")
-    private val GAS_CHARACTERISTIC = UUID.fromString("00002b00-0000-1000-8000-00805f9b34fb")
+    private var isConnected = false
+    private var isScanning = false
 
-    private val foundDevices = mutableListOf<BluetoothDevice>()
+    // UUIDs
+    private val SERVICE_UUID =
+        UUID.fromString("47617353-656e-736f-7253-766300000000")
 
-    // Companion object para constantes
-    companion object {
-        const val TAG = "BluetoothManager"
-        const val SCAN_PERIOD: Long = 10000
-        const val READING_INTERVAL: Long = 2000
-    }
+    private val DATA_CHAR_UUID =
+        UUID.fromString("47617352-6561-6469-6e67-73000000000")
 
-    init {
-        // Usar un nombre diferente para evitar conflicto con el nombre de la clase
-        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
-        bluetoothAdapter = btManager?.adapter  // Ahora sí encuentra 'adapter'
-        bleScanner = bluetoothAdapter?.bluetoothLeScanner
-    }
+    private val CCCD_UUID =
+        UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
     fun setListener(listener: BluetoothListener) {
         this.listener = listener
     }
 
-    // Escaneo BLE
+    // 🔍 SCAN
     @SuppressLint("MissingPermission")
     fun startScan() {
         if (isScanning) return
-
-        isScanning = true
         foundDevices.clear()
-
-        bleScanner?.startScan(scanCallback)
-
-        handler.postDelayed({
-            stopScan()
-        }, SCAN_PERIOD)
-
-        Log.d(TAG, "Escaneo BLE iniciado")
+        isScanning = true
+        bleScanner.startScan(scanCallback)
     }
 
     @SuppressLint("MissingPermission")
     fun stopScan() {
         if (!isScanning) return
-
-        bleScanner?.stopScan(scanCallback)
+        bleScanner.stopScan(scanCallback)
         isScanning = false
-        Log.d(TAG, "Escaneo BLE detenido")
     }
 
-    // Conexión BLE
+    // 🔗 CONNECT
     @SuppressLint("MissingPermission")
     fun connectToDevice(device: BluetoothDevice) {
+        gatt?.close()
+        gatt = device.connectGatt(context, false, gattCallback)
         listener?.onConnectionStateChanged(false, "Conectando...")
-
-        bluetoothGatt?.close()
-        bluetoothGatt = device.connectGatt(context, false, gattCallback)
-        Log.d(TAG, "Conectando a: ${device.address}")
     }
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
-        bluetoothGatt?.disconnect()
-        bluetoothGatt?.close()
-        bluetoothGatt = null
+        gatt?.disconnect()
+        gatt?.close()
+        gatt = null
         isConnected = false
-        stopSensorReadings()
         listener?.onConnectionStateChanged(false, "Desconectado")
-        Log.d(TAG, "Dispositivo desconectado")
     }
 
-    // Lecturas de sensores
-    @SuppressLint("MissingPermission")
-    private fun setupSensorReadings(gatt: BluetoothGatt) {
-        var sensorsFound = 0
-
-        // Temperatura
-        val tempService = gatt.getService(ENVIRONMENTAL_SENSING_SERVICE)
-        val tempChar = tempService?.getCharacteristic(TEMPERATURE_CHARACTERISTIC)
-        if (tempChar != null) {
-            gatt.setCharacteristicNotification(tempChar, true)
-            gatt.readCharacteristic(tempChar)
-            sensorsFound++
-        }
-
-        // Humedad
-        val humidityChar = tempService?.getCharacteristic(HUMIDITY_CHARACTERISTIC)
-        if (humidityChar != null) {
-            gatt.setCharacteristicNotification(humidityChar, true)
-            gatt.readCharacteristic(humidityChar)
-            sensorsFound++
-        }
-
-        // Gas
-        val gasService = gatt.getService(GAS_SENSOR_SERVICE)
-        val gasChar = gasService?.getCharacteristic(GAS_CHARACTERISTIC)
-        if (gasChar != null) {
-            gatt.setCharacteristicNotification(gasChar, true)
-            gatt.readCharacteristic(gasChar)
-            sensorsFound++
-        }
-
-        if (sensorsFound > 0) {
-            startContinuousReadings()
-            listener?.onConnectionStateChanged(true, "$sensorsFound sensores configurados")
-        } else {
-            listener?.onError("No se encontraron sensores")
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun startContinuousReadings() {
-        handler.post(object : Runnable {
-            override fun run() {
-                if (isConnected && bluetoothGatt != null) {
-                    bluetoothGatt?.let { gatt ->
-                        val tempService = gatt.getService(ENVIRONMENTAL_SENSING_SERVICE)
-                        tempService?.getCharacteristic(TEMPERATURE_CHARACTERISTIC)?.let {
-                            gatt.readCharacteristic(it)
-                        }
-                        tempService?.getCharacteristic(HUMIDITY_CHARACTERISTIC)?.let {
-                            gatt.readCharacteristic(it)
-                        }
-                        val gasService = gatt.getService(GAS_SENSOR_SERVICE)
-                        gasService?.getCharacteristic(GAS_CHARACTERISTIC)?.let {
-                            gatt.readCharacteristic(it)
-                        }
-                    }
-                    handler.postDelayed(this, READING_INTERVAL)
-                }
-            }
-        })
-    }
-
-    private fun stopSensorReadings() {
-        handler.removeCallbacksAndMessages(null)
-    }
-
-    // Procesamiento de datos
-    private fun processSensorData(characteristic: BluetoothGattCharacteristic) {
-        val temperature: Float
-        val humidity: Float
-        val gasLevel: Int
-
-        when (characteristic.uuid) {
-            TEMPERATURE_CHARACTERISTIC -> {
-                temperature = parseTemperatureData(characteristic.value)
-                humidity = 0.0f
-                gasLevel = 0
-                listener?.onSensorDataUpdated(temperature, humidity, gasLevel)
-            }
-            HUMIDITY_CHARACTERISTIC -> {
-                temperature = 0.0f
-                humidity = parseHumidityData(characteristic.value)
-                gasLevel = 0
-                listener?.onSensorDataUpdated(temperature, humidity, gasLevel)
-            }
-            GAS_CHARACTERISTIC -> {
-                temperature = 0.0f
-                humidity = 0.0f
-                gasLevel = parseGasData(characteristic.value)
-                listener?.onSensorDataUpdated(temperature, humidity, gasLevel)
-            }
-            else -> return
-        }
-    }
-
-    private fun parseTemperatureData(data: ByteArray?): Float {
-        if (data == null || data.size < 2) return 0.0f
-        return try {
-            val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
-            buffer.short.toFloat() / 100.0f
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parseando temperatura: ${e.message}")
-            0.0f
-        }
-    }
-
-    private fun parseHumidityData(data: ByteArray?): Float {
-        if (data == null || data.size < 2) return 0.0f
-        return try {
-            val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
-            (buffer.short.toInt() and 0xFFFF).toFloat() / 100.0f
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parseando humedad: ${e.message}")
-            0.0f
-        }
-    }
-
-    private fun parseGasData(data: ByteArray?): Int {
-        if (data == null || data.isEmpty()) return 0
-        return try {
-            when (data.size) {
-                1 -> data[0].toInt() and 0xFF
-                2 -> ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).short.toInt() and 0xFFFF
-                4 -> ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).int
-                else -> 0
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parseando gas: ${e.message}")
-            0
-        }
-    }
-
-    // Callbacks
+    // 🔁 SCAN CALLBACK
     private val scanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val device = result.device
-            if (!foundDevices.any { it.address == device.address }) {
-                foundDevices.add(device)
+        override fun onScanResult(type: Int, result: ScanResult) {
+            if (foundDevices.add(result.device)) {
                 listener?.onDevicesFound(foundDevices.toList())
             }
         }
-
-        override fun onScanFailed(errorCode: Int) {
-            listener?.onError("Error en escaneo: $errorCode")
-        }
     }
 
+    // 🔧 GATT CALLBACK
     private val gattCallback = object : BluetoothGattCallback() {
-        @SuppressLint("MissingPermission")
+
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> {
-                    isConnected = true
-                    gatt.discoverServices()
-                    listener?.onConnectionStateChanged(true, "Conectado - Descubriendo servicios...")
-                }
-                BluetoothProfile.STATE_DISCONNECTED -> {
-                    isConnected = false
-                    stopSensorReadings()
-                    listener?.onConnectionStateChanged(false, "Desconectado")
-                }
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                isConnected = true
+                gatt.discoverServices()
+            } else {
+                isConnected = false
+                listener?.onConnectionStateChanged(false, "Desconectado")
             }
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                setupSensorReadings(gatt)
-            } else {
-                listener?.onError("Error descubriendo servicios: $status")
+            val service = gatt.getService(SERVICE_UUID)
+            val characteristic = service?.getCharacteristic(DATA_CHAR_UUID)
+
+            if (characteristic == null) {
+                listener?.onError("Characteristic no encontrada")
+                return
             }
+
+            gatt.setCharacteristicNotification(characteristic, true)
+
+            val cccd = characteristic.getDescriptor(CCCD_UUID)
+            cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            gatt.writeDescriptor(cccd)
+
+            listener?.onConnectionStateChanged(true, "🟢 Conectado al nRF52")
         }
 
-        override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                processSensorData(characteristic)
-            }
-        }
-
-        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-            processSensorData(characteristic)
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            parseGasPacket(characteristic.value)
         }
     }
 
-    fun isScanning(): Boolean = isScanning
-    fun isConnected(): Boolean = isConnected
+    // 📦 Parsear EXACTAMENTE los 5 floats del firmware
+    private fun parseGasPacket(data: ByteArray?) {
+        if (data == null || data.size < 20) return
+
+        val buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
+
+        val co = buffer.float
+        val no2 = buffer.float
+        val nh3 = buffer.float
+        val ch4 = buffer.float
+        val etoh = buffer.float
+
+        // En tu UI solo muestras 3 → elegimos los principales
+        listener?.onSensorDataUpdated(
+            temperature = co,
+            humidity = no2,
+            gasLevel = etoh.toInt()
+        )
+    }
+
+    fun isScanning() = isScanning
+    fun isConnected() = isConnected
 
     fun cleanup() {
         stopScan()
         disconnect()
-        handler.removeCallbacksAndMessages(null)
     }
 }

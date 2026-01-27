@@ -15,9 +15,8 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private lateinit var statusText: TextView
     private lateinit var dataText: TextView
     private lateinit var scanButton: Button
-    private lateinit var connectButton: TextView
+    private lateinit var connectButton: Button
 
-    // Inicializar las propiedades inmediatamente en lugar de usar lateinit
     private val bluetoothManager: BluetoothManager by lazy { BluetoothManager(this) }
     private val permissionHelper: PermissionHelper by lazy { PermissionHelper(this) }
     private val firebaseManager: FirebaseManager by lazy { FirebaseManager() }
@@ -25,23 +24,24 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private var selectedDevice: BluetoothDevice? = null
     private var isUsingMockData = true
 
-    // Variables para almacenar lecturas de sensores
-    private var temperature: Float = 0.0f
-    private var humidity: Float = 0.0f
-    private var gasLevel: Int = 0
+    // Datos sensores
+    private var temperature = 0.0f
+    private var humidity = 0.0f
+    private var gasLevel = 0
+
+    // Nombre real de nuestro DEVICE
+    private val TARGET_DEVICE_NAME = "nRF52_Demo"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         initializeViews()
+        initializeManagers()
         setupClickListeners()
 
-        // Inicializar managers después de las vistas
-        initializeManagers()
-
-        // Iniciar datos mock por defecto
-        startMockData()
+        // Comentada por ahora
+       // startMockData()
     }
 
     private fun initializeViews() {
@@ -51,19 +51,15 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         connectButton = findViewById(R.id.connectButton)
 
         connectButton.isEnabled = false
-
-        // Mostrar estado inicial sin depender de bluetoothManager
         updateSensorDisplay()
     }
 
     private fun initializeManagers() {
-        // Configurar el listener después de que bluetoothManager esté inicializado
         bluetoothManager.setListener(this)
-
-        // Firebase se inicializa automáticamente, no necesita initialize()
     }
 
     private fun setupClickListeners() {
+
         scanButton.setOnClickListener {
             if (bluetoothManager.isScanning()) {
                 stopScan()
@@ -73,21 +69,17 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         }
 
         connectButton.setOnClickListener {
-            if (bluetoothManager.isConnected()) {
-                disconnectDevice()
-            } else {
-                selectedDevice?.let { device ->
-                    connectToDevice(device) // 3. Conectar
-                } ?: run {
-                    Toast.makeText(this, "Primero escanea y encuentra dispositivos", Toast.LENGTH_SHORT).show()
+            selectedDevice?.let {
+                if (bluetoothManager.isConnected()) {
+                    disconnectDevice()
+                } else {
+                    connectToDevice(it)
                 }
-            }
+            } ?: Toast.makeText(this, "No hay dispositivo seleccionado", Toast.LENGTH_SHORT).show()
         }
 
-        // Historial
         findViewById<Button>(R.id.btnHistory).setOnClickListener {
-            val intent = Intent(this, HistoryActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, HistoryActivity::class.java))
         }
     }
 
@@ -97,116 +89,108 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             return
         }
 
-        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        if (adapter == null || !adapter.isEnabled) {
             statusText.text = "📱 Activa Bluetooth primero"
             enableBluetooth()
             return
         }
-        // 1. Escanear dispositivos
+
         bluetoothManager.startScan()
         statusText.text = "🔍 Escaneando BLE..."
         scanButton.text = "🛑 Detener Escaneo"
         connectButton.isEnabled = false
-        dataText.text = "Buscando dispositivos...\n\n"
+        selectedDevice = null
+        dataText.text = "Buscando nRF52...\n\n"
     }
 
     private fun stopScan() {
         bluetoothManager.stopScan()
-        statusText.text = "✅ Escaneo terminado"
-        scanButton.text = "🔍 Buscar Dispositivos BLE"
-
-        if (dataText.text.toString().contains("MAC:")) {
-            connectButton.isEnabled = true
-            connectButton.text = "🔗 Conectar al Sensor"
-        }
+        statusText.text = "✅ Escaneo finalizado"
+        scanButton.text = "🔍 Buscar dispositivo BLE"
+        connectButton.isEnabled = selectedDevice != null
     }
 
     @SuppressLint("MissingPermission")
     private fun enableBluetooth() {
-        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-        startActivityForResult(enableBtIntent, PermissionHelper.BLUETOOTH_REQUEST_CODE)
+        startActivityForResult(
+            Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),
+            PermissionHelper.BLUETOOTH_REQUEST_CODE
+        )
     }
 
     private fun connectToDevice(device: BluetoothDevice) {
-        stopMockData() // Detener datos mock al conectar dispositivo real
+        stopMockData()
         isUsingMockData = false
 
         bluetoothManager.connectToDevice(device)
-        statusText.text = "🔗 Conectando a sensor..."
+        statusText.text = "🔗 Conectando a ${device.name}..."
         connectButton.isEnabled = false
         connectButton.text = "Conectando..."
     }
 
     private fun disconnectDevice() {
         bluetoothManager.disconnect()
-        statusText.text = "🔌 Desconectando..."
-        connectButton.isEnabled = false
-
-        // Volver a datos mock si se desconecta
-        startMockData()
+        statusText.text = "🔌 Desconectado"
+        connectButton.text = "🔗 Conectar al Sensor"
+        connectButton.isEnabled = selectedDevice != null
         isUsingMockData = true
     }
 
-    // 2. Mostrar dispositivos encontrados
+    // 🔍 Dispositivos encontrados
     override fun onDevicesFound(devices: List<BluetoothDevice>) {
         runOnUiThread {
-            val currentText = dataText.text.toString()
-            val newDeviceInfo = devices.joinToString("\n") { device ->
-                "• ${device.name ?: "Sin nombre"}\n  MAC: ${device.address}\n"
+            val filtered = devices.filter {
+                it.name != null && it.name.contains(TARGET_DEVICE_NAME)
             }
 
-            if (currentText.startsWith("Buscando dispositivos...")) {
-                dataText.text = newDeviceInfo
-                selectedDevice = devices.firstOrNull()
-            } else {
-                dataText.text = currentText + newDeviceInfo
-                if (selectedDevice == null) {
-                    selectedDevice = devices.firstOrNull()
-                }
+            if (filtered.isNotEmpty()) {
+                selectedDevice = filtered.first()
+                dataText.text = """
+                    ✅ Dispositivo encontrado:
+                    ${selectedDevice?.name}
+                    MAC: ${selectedDevice?.address}
+                """.trimIndent()
+                connectButton.isEnabled = true
             }
         }
     }
 
+    // 🔗 Estado conexión
     override fun onConnectionStateChanged(connected: Boolean, message: String) {
         runOnUiThread {
             statusText.text = message
+            connectButton.text =
+                if (connected) "🔌 Desconectar" else "🔗 Conectar al Sensor"
             connectButton.isEnabled = true
-            connectButton.text = if (connected) "🔌 Desconectar" else "🔗 Conectar al Sensor"
         }
     }
 
-    // 4. Recibir datos reales
-        override fun onSensorDataUpdated(temperature: Float, humidity: Float, gasLevel: Int) {
-        this.temperature = temperature
-        this.humidity = humidity
-        this.gasLevel = gasLevel
+    // 📡 Datos reales desde nRF52
+    override fun onSensorDataUpdated(temp: Float, hum: Float, gas: Int) {
+        temperature = temp
+        humidity = hum
+        gasLevel = gas
 
-        runOnUiThread {
-            updateSensorDisplay()
-        }
+        runOnUiThread { updateSensorDisplay() }
 
-        // Enviar a Firebase
-        firebaseManager.sendSensorData(temperature, humidity, gasLevel)
+        firebaseManager.sendSensorData(temp, hum, gas)
     }
 
     override fun onError(message: String) {
         runOnUiThread {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            statusText.text = "❌ Error"
+            statusText.text = "❌ Error BLE"
         }
     }
 
-    // Mock data management
+    // 🧪 Mock data
     private fun startMockData() {
-        firebaseManager.startMockData { temp, hum, gas ->
-            this.temperature = temp
-            this.humidity = hum
-            this.gasLevel = gas
-
-            runOnUiThread {
-                updateSensorDisplay()
-            }
+        firebaseManager.startMockData { t, h, g ->
+            temperature = t
+            humidity = h
+            gasLevel = g
+            runOnUiThread { updateSensorDisplay() }
         }
     }
 
@@ -215,15 +199,10 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     }
 
     private fun updateSensorDisplay() {
-        // Verificar si bluetoothManager está inicializado antes de usarlo
-        val isConnected = try {
-            bluetoothManager.isConnected()
-        } catch (e: UninitializedPropertyAccessException) {
-            false
-        }
+        val connected = bluetoothManager.isConnected()
 
-        val sensorText = """
-            🌡️ MONITOR AMBIENTAL 🌡️
+        dataText.text = """
+            🌡️ MONITOR AMBIENTAL
             
             Temperatura: ${"%.1f".format(temperature)} °C
             Humedad: ${"%.1f".format(humidity)} %
@@ -231,29 +210,29 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             
             ${getAirQuality(gasLevel)}
             
-            Estado: ${if (isConnected) "✅ Conectado" else "❌ Desconectado"}
-            ${if (isUsingMockData) "🧪 Usando datos de prueba" else "📱 Dispositivo real"}
+            Estado: ${if (connected) "✅ Conectado" else "❌ Desconectado"}
+            ${if (isUsingMockData) "🧪 Datos simulados" else "📡 nRF52 real"}
         """.trimIndent()
-
-        dataText.text = sensorText
     }
 
-    private fun getAirQuality(gasLevel: Int): String {
-        return when {
-            gasLevel < 100 -> "✅ Calidad del aire: Excelente"
-            gasLevel < 300 -> "⚠️ Calidad del aire: Buena"
-            gasLevel < 500 -> "🔶 Calidad del aire: Regular"
-            else -> "🔴 Calidad del aire: Mala"
+    private fun getAirQuality(gas: Int): String =
+        when {
+            gas < 100 -> "✅ Aire excelente"
+            gas < 300 -> "⚠️ Aire bueno"
+            gas < 500 -> "🔶 Aire regular"
+            else -> "🔴 Aire malo"
         }
-    }
 
-    // Permission handling
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PermissionHelper.PERMISSION_REQUEST_CODE) {
-            if (permissionHelper.handlePermissionResult(grantResults)) {
-                startBleScan()
-            }
+        if (requestCode == PermissionHelper.PERMISSION_REQUEST_CODE &&
+            permissionHelper.handlePermissionResult(grantResults)
+        ) {
+            startBleScan()
         }
     }
 
