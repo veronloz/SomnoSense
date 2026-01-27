@@ -83,6 +83,12 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
                 }
             }
         }
+
+        // Historial
+        findViewById<Button>(R.id.btnHistory).setOnClickListener {
+            val intent = Intent(this, HistoryActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun startBleScan() {
