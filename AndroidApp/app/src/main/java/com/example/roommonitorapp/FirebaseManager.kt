@@ -55,6 +55,22 @@ class FirebaseManager {
         }, 0, 5000) // Cada 5 segundos
     }
 
+    fun getSensorHistory(callback: (List<SensorReading>) -> Unit) {
+        // Usamos firebaseDB en lugar de database
+        firebaseDB.child("readings").orderByChild("timestamp")
+            .addValueEventListener(object : com.google.firebase.database.ValueEventListener {
+                override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                    val readings = mutableListOf<SensorReading>()
+                    for (postSnapshot in snapshot.children) {
+                        val reading = postSnapshot.getValue(SensorReading::class.java)
+                        reading?.let { readings.add(it) }
+                    }
+                    callback(readings.reversed())
+                }
+                override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
+            })
+    }
+
     fun stopMockData() {
         mockTimer?.cancel()
         mockTimer = null

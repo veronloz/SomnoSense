@@ -1,23 +1,21 @@
 package com.example.roommonitorapp
 
-import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
-import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.example.roommonitorapp.databinding.ActivityMainBinding
+import com.google.android.material.color.MaterialColors
 
 class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
 
-    private lateinit var statusText: TextView
-    private lateinit var dataText: TextView
-    private lateinit var scanButton: Button
-    private lateinit var connectButton: TextView
+    // ViewBinding: La forma moderna y segura de acceder a las vistas
+    private lateinit var binding: ActivityMainBinding
 
-    // Inicializar las propiedades inmediatamente en lugar de usar lateinit
     private val bluetoothManager: BluetoothManager by lazy { BluetoothManager(this) }
     private val permissionHelper: PermissionHelper by lazy { PermissionHelper(this) }
     private val firebaseManager: FirebaseManager by lazy { FirebaseManager() }
@@ -25,46 +23,39 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private var selectedDevice: BluetoothDevice? = null
     private var isUsingMockData = true
 
-    // Variables para almacenar lecturas de sensores
+    // Datos del sensor
     private var temperature: Float = 0.0f
     private var humidity: Float = 0.0f
     private var gasLevel: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        initializeViews()
+        // Inicialización de ViewBinding
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        setupUI()
         setupClickListeners()
 
-        // Inicializar managers después de las vistas
-        initializeManagers()
+        // Inyectar el listener en tu Manager
+        bluetoothManager.setListener(this)
 
-        // Iniciar datos mock por defecto
+        // Comenzar con datos de prueba hasta que haya conexión real
         startMockData()
     }
 
-    private fun initializeViews() {
-        statusText = findViewById(R.id.statusText)
-        dataText = findViewById(R.id.dataText)
-        scanButton = findViewById(R.id.scanButton)
-        connectButton = findViewById(R.id.connectButton)
+    private fun setupUI() {
+        // Configuramos la fuente (asegúrate de haber importado @font/nunito)
+        // binding.dataText.typeface = ResourcesCompat.getFont(this, R.font.nunito)
 
-        connectButton.isEnabled = false
-
-        // Mostrar estado inicial sin depender de bluetoothManager
-        updateSensorDisplay()
-    }
-
-    private fun initializeManagers() {
-        // Configurar el listener después de que bluetoothManager esté inicializado
-        bluetoothManager.setListener(this)
-
-        // Firebase se inicializa automáticamente, no necesita initialize()
+        binding.connectButton.isEnabled = false
+        updateStatusUI("Esperando conexión BLE...", "🔵",
+            MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorPrimaryContainer))
     }
 
     private fun setupClickListeners() {
-        scanButton.setOnClickListener {
+        binding.scanButton.setOnClickListener {
             if (bluetoothManager.isScanning()) {
                 stopScan()
             } else {
@@ -72,24 +63,22 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             }
         }
 
-        connectButton.setOnClickListener {
+        binding.connectButton.setOnClickListener {
             if (bluetoothManager.isConnected()) {
                 disconnectDevice()
             } else {
                 selectedDevice?.let { device ->
-                    connectToDevice(device) // 3. Conectar
-                } ?: run {
-                    Toast.makeText(this, "Primero escanea y encuentra dispositivos", Toast.LENGTH_SHORT).show()
-                }
+                    connectToDevice(device)
+                } ?: showToast("Escanea para encontrar dispositivos primero")
             }
         }
 
-        // Historial
-        findViewById<Button>(R.id.btnHistory).setOnClickListener {
-            val intent = Intent(this, HistoryActivity::class.java)
-            startActivity(intent)
+        binding.btnHistory.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
         }
     }
+
+    // --- LÓGICA DE BLUETOOTH ---
 
     private fun startBleScan() {
         if (!permissionHelper.hasAllRequiredPermissions()) {
@@ -97,172 +86,132 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             return
         }
 
-        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-            statusText.text = "📱 Activa Bluetooth primero"
-            enableBluetooth()
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        if (adapter == null || !adapter.isEnabled) {
+            updateStatusUI("Activa el Bluetooth", "📱", Color.parseColor("#EF5350"))
             return
         }
-        // 1. Escanear dispositivos
+
         bluetoothManager.startScan()
-        statusText.text = "🔍 Escaneando BLE..."
-        scanButton.text = "🛑 Detener Escaneo"
-        connectButton.isEnabled = false
-        dataText.text = "Buscando dispositivos...\n\n"
+        updateStatusUI("Buscando sensores...", "🔍", Color.parseColor("#42A5F5"))
+        binding.scanButton.text = "Detener"
     }
 
     private fun stopScan() {
         bluetoothManager.stopScan()
-        statusText.text = "✅ Escaneo terminado"
-        scanButton.text = "🔍 Buscar Dispositivos BLE"
-
-        if (dataText.text.toString().contains("MAC:")) {
-            connectButton.isEnabled = true
-            connectButton.text = "🔗 Conectar al Sensor"
+        binding.scanButton.text = "Buscar BLE"
+        if (selectedDevice == null) {
+            updateStatusUI("Escaneo terminado", "🔵", Color.GRAY)
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun enableBluetooth() {
-        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-        startActivityForResult(enableBtIntent, PermissionHelper.BLUETOOTH_REQUEST_CODE)
-    }
-
     private fun connectToDevice(device: BluetoothDevice) {
-        stopMockData() // Detener datos mock al conectar dispositivo real
+        stopMockData()
         isUsingMockData = false
-
         bluetoothManager.connectToDevice(device)
-        statusText.text = "🔗 Conectando a sensor..."
-        connectButton.isEnabled = false
-        connectButton.text = "Conectando..."
+        updateStatusUI("Conectando...", "⏳", Color.parseColor("#FFA726"))
+        binding.connectButton.isEnabled = false
     }
 
     private fun disconnectDevice() {
         bluetoothManager.disconnect()
-        statusText.text = "🔌 Desconectando..."
-        connectButton.isEnabled = false
-
-        // Volver a datos mock si se desconecta
+        updateStatusUI("Desconectando...", "🔌", Color.GRAY)
         startMockData()
         isUsingMockData = true
     }
 
-    // 2. Mostrar dispositivos encontrados
+    // --- CALLBACKS DEL BLUETOOTH LISTENER ---
+
     override fun onDevicesFound(devices: List<BluetoothDevice>) {
         runOnUiThread {
-            val currentText = dataText.text.toString()
-            val newDeviceInfo = devices.joinToString("\n") { device ->
-                "• ${device.name ?: "Sin nombre"}\n  MAC: ${device.address}\n"
-            }
-
-            if (currentText.startsWith("Buscando dispositivos...")) {
-                dataText.text = newDeviceInfo
-                selectedDevice = devices.firstOrNull()
-            } else {
-                dataText.text = currentText + newDeviceInfo
-                if (selectedDevice == null) {
-                    selectedDevice = devices.firstOrNull()
-                }
+            selectedDevice = devices.firstOrNull()
+            if (selectedDevice != null) {
+                binding.dataText.text = "Dispositivo listo:\n${selectedDevice?.name ?: "Sensor Room"}\nMAC: ${selectedDevice?.address}"
+                binding.connectButton.isEnabled = true
+                updateStatusUI("Dispositivo encontrado", "📍", Color.parseColor("#66BB6A"))
             }
         }
     }
 
     override fun onConnectionStateChanged(connected: Boolean, message: String) {
         runOnUiThread {
-            statusText.text = message
-            connectButton.isEnabled = true
-            connectButton.text = if (connected) "🔌 Desconectar" else "🔗 Conectar al Sensor"
+            if (connected) {
+                updateStatusUI("Conectado", "🟢", Color.parseColor("#43A047"))
+                binding.connectButton.text = "Desconectar"
+                binding.connectButton.isEnabled = true
+            } else {
+                updateStatusUI("Desconectado", "🔴", Color.parseColor("#E53935"))
+                binding.connectButton.text = "Conectar"
+                binding.connectButton.isEnabled = true
+            }
         }
     }
 
-    // 4. Recibir datos reales
-        override fun onSensorDataUpdated(temperature: Float, humidity: Float, gasLevel: Int) {
-        this.temperature = temperature
-        this.humidity = humidity
-        this.gasLevel = gasLevel
+    override fun onSensorDataUpdated(temp: Float, hum: Float, gas: Int) {
+        this.temperature = temp
+        this.humidity = hum
+        this.gasLevel = gas
 
-        runOnUiThread {
-            updateSensorDisplay()
-        }
+        runOnUiThread { updateSensorDisplay() }
 
-        // Enviar a Firebase
-        firebaseManager.sendSensorData(temperature, humidity, gasLevel)
+        // Sincronización Pro con Firebase
+        firebaseManager.sendSensorData(temp, hum, gas)
     }
 
     override fun onError(message: String) {
         runOnUiThread {
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            statusText.text = "❌ Error"
+            showToast(message)
+            updateStatusUI("Error de sensor", "⚠️", Color.RED)
         }
     }
 
-    // Mock data management
-    private fun startMockData() {
-        firebaseManager.startMockData { temp, hum, gas ->
-            this.temperature = temp
-            this.humidity = hum
-            this.gasLevel = gas
+    // --- UI HELPERS ---
 
-            runOnUiThread {
-                updateSensorDisplay()
-            }
-        }
-    }
-
-    private fun stopMockData() {
-        firebaseManager.stopMockData()
+    private fun updateStatusUI(msg: String, icon: String, color: Int) {
+        binding.statusText.text = msg
+        binding.statusIcon.text = icon
+        binding.statusCard.setCardBackgroundColor(color)
+        // Aseguramos legibilidad del texto
+        binding.statusText.setTextColor(if (color == Color.GRAY) Color.BLACK else Color.WHITE)
     }
 
     private fun updateSensorDisplay() {
-        // Verificar si bluetoothManager está inicializado antes de usarlo
-        val isConnected = try {
-            bluetoothManager.isConnected()
-        } catch (e: UninitializedPropertyAccessException) {
-            false
-        }
+        val quality = getAirQuality(gasLevel)
 
-        val sensorText = """
-            🌡️ MONITOR AMBIENTAL 🌡️
+        // Uso de Monospace para los valores numéricos para que se vean alineados
+        val display = """
+            [ DATOS EN TIEMPO REAL ]
             
-            Temperatura: ${"%.1f".format(temperature)} °C
-            Humedad: ${"%.1f".format(humidity)} %
-            Nivel de Gas: $gasLevel
+            TEMPERATURA : ${"%.1f".format(temperature)} °C
+            HUMEDAD     : ${"%.1f".format(humidity)} %
+            NIVEL GAS   : $gasLevel
             
-            ${getAirQuality(gasLevel)}
+            CALIDAD AIRE: $quality
             
-            Estado: ${if (isConnected) "✅ Conectado" else "❌ Desconectado"}
-            ${if (isUsingMockData) "🧪 Usando datos de prueba" else "📱 Dispositivo real"}
+            ORIGEN: ${if (isUsingMockData) "🧪 MODO SIMULACIÓN" else "📡 SENSOR FÍSICO"}
         """.trimIndent()
 
-        dataText.text = sensorText
+        binding.dataText.text = display
     }
 
-    private fun getAirQuality(gasLevel: Int): String {
-        return when {
-            gasLevel < 100 -> "✅ Calidad del aire: Excelente"
-            gasLevel < 300 -> "⚠️ Calidad del aire: Buena"
-            gasLevel < 500 -> "🔶 Calidad del aire: Regular"
-            else -> "🔴 Calidad del aire: Mala"
+    private fun getAirQuality(gas: Int): String = when {
+        gas < 100 -> "EXCELENTE ✨"
+        gas < 300 -> "ACEPTABLE 👍"
+        else -> "MALA (VENTILAR) 🚨"
+    }
+
+    private fun startMockData() {
+        firebaseManager.startMockData { t, h, g ->
+            this.temperature = t
+            this.humidity = h
+            this.gasLevel = g
+            runOnUiThread { updateSensorDisplay() }
         }
     }
 
-    // Permission handling
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PermissionHelper.PERMISSION_REQUEST_CODE) {
-            if (permissionHelper.handlePermissionResult(grantResults)) {
-                startBleScan()
-            }
-        }
-    }
+    private fun stopMockData() = firebaseManager.stopMockData()
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PermissionHelper.BLUETOOTH_REQUEST_CODE && resultCode == RESULT_OK) {
-            startBleScan()
-        }
-    }
+    private fun showToast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
 
     override fun onDestroy() {
         super.onDestroy()
