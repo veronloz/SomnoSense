@@ -6,20 +6,22 @@ import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.*
 
 class HistoryActivity : AppCompatActivity() {
 
-    // ← USAR EL MISMO PATRÓN QUE FirebaseManager
+    companion object {
+        const val TAG = "HistoryActivity"
+    }
+
+    // MISMA base de datos que FirebaseManager
     private val database = FirebaseDatabase
         .getInstance("https://somnosense-default-rtdb.europe-west1.firebasedatabase.app/")
         .getReference("somnosense/data")
 
     private val readings = mutableListOf<String>()
     private lateinit var adapter: ArrayAdapter<String>
+
     private lateinit var titleText: TextView
     private lateinit var listView: ListView
 
@@ -35,88 +37,94 @@ class HistoryActivity : AppCompatActivity() {
         titleText = findViewById(R.id.tvHistoryTitle)
         listView = findViewById(R.id.listViewHistory)
 
-        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, readings)
+        adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            readings
+        )
         listView.adapter = adapter
 
-        titleText.text = "📊 Cargando datos..."
+        titleText.text = "📊 Cargando histórico..."
     }
 
     private fun loadHistoricalData() {
         database
-            .limitToLast(50) // Últimas 50 lecturas
+            .limitToLast(50)
             .addValueEventListener(object : ValueEventListener {
+
                 override fun onDataChange(snapshot: DataSnapshot) {
                     readings.clear()
 
-                    if (snapshot.childrenCount == 0L) {
-                        readings.add("📭 No hay datos disponibles")
+                    if (!snapshot.hasChildren()) {
+                        readings.add("📭 No hay datos disponibles aún")
                         readings.add("")
-                        readings.add("💡 Tip: Deja la app abierta unos minutos")
-                        readings.add("para que se generen datos de prueba")
+                        readings.add("💡 Deja la app abierta unos minutos")
                         adapter.notifyDataSetChanged()
-                        titleText.text = "📊 Histórico de Mediciones"
+                        titleText.text = "📊 Histórico"
                         return
                     }
 
                     var count = 0
-                    // Invertir orden para mostrar más reciente primero
-                    snapshot.children.reversed().forEach { dataSnapshot ->
-                        try {
-                            // Leer datos como Map (mismo formato que FirebaseManager)
-                            val timestamp = dataSnapshot.child("timestamp").getValue(Long::class.java) ?: 0L
-                            val temperature = dataSnapshot.child("temperature").getValue(Double::class.java) ?: 0.0
-                            val humidity = dataSnapshot.child("humidity").getValue(Double::class.java) ?: 0.0
-                            val gasLevel = dataSnapshot.child("gasLevel").getValue(Int::class.java) ?: 0
-                            val deviceId = dataSnapshot.child("deviceId").getValue(String::class.java) ?: "Unknown"
 
-                            count++
-                            val formattedDate = java.text.SimpleDateFormat(
-                                "dd/MM/yyyy HH:mm:ss",
-                                java.util.Locale.getDefault()
-                            ).format(java.util.Date(timestamp))
+                    snapshot.children
+                        .toList()
+                        .reversed() // más reciente primero
+                        .forEach { data ->
 
-                            val airQuality = getAirQuality(gasLevel)
+                            try {
+                                val timestamp =
+                                    data.child("timestamp").getValue(Long::class.java) ?: 0L
 
-                            val formattedReading = """
-                                📅 $formattedDate
-                                🌡️ Temperatura: ${String.format("%.1f", temperature)}°C
-                                💧 Humedad: ${String.format("%.1f", humidity)}%
-                                🌫️ Nivel de Gas: $gasLevel
-                                $airQuality
-                                📱 Dispositivo: $deviceId
-                                ────────────────────
-                            """.trimIndent()
+                                val co =
+                                    data.child("co").getValue(Double::class.java) ?: 0.0
+                                val no2 =
+                                    data.child("no2").getValue(Double::class.java) ?: 0.0
+                                val nh3 =
+                                    data.child("nh3").getValue(Double::class.java) ?: 0.0
+                                val ch4 =
+                                    data.child("ch4").getValue(Double::class.java) ?: 0.0
+                                val etoh =
+                                    data.child("c2h5oh").getValue(Double::class.java) ?: 0.0
 
-                            readings.add(formattedReading)
-                        } catch (e: Exception) {
-                            Log.e("History", "Error al parsear lectura: ${e.message}")
+                                val formattedDate =
+                                    java.text.SimpleDateFormat(
+                                        "dd/MM/yyyy HH:mm:ss",
+                                        java.util.Locale.getDefault()
+                                    ).format(java.util.Date(timestamp))
+
+                                val formattedReading = """
+                                    📅 $formattedDate
+
+                                    CO: ${"%.2f".format(co)} ppm
+                                    NO₂: ${"%.2f".format(no2)} ppm
+                                    NH₃: ${"%.2f".format(nh3)} ppm
+                                    CH₄: ${"%.2f".format(ch4)} ppm
+                                    C₂H₅OH: ${"%.2f".format(etoh)} ppm
+                                    ────────────────────
+                                                                    """.trimIndent()
+
+                                readings.add(formattedReading)
+                                count++
+
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error parseando registro", e)
+                            }
                         }
-                    }
 
                     adapter.notifyDataSetChanged()
                     titleText.text = "📊 Histórico ($count registros)"
 
-                    Log.d("History", "✅ Cargados $count registros desde Firebase")
+                    Log.d(TAG, "Cargados $count registros")
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    Log.e("History", "❌ Error Firebase: ${error.message}")
+                    Log.e(TAG, "Error Firebase: ${error.message}")
                     readings.clear()
-                    readings.add("❌ Error al cargar datos")
-                    readings.add("")
-                    readings.add("Detalle: ${error.message}")
+                    readings.add("❌ Error al cargar el histórico")
+                    readings.add(error.message)
                     adapter.notifyDataSetChanged()
-                    titleText.text = "📊 Error en Histórico"
+                    titleText.text = "📊 Error"
                 }
             })
-    }
-
-    private fun getAirQuality(gasLevel: Int): String {
-        return when {
-            gasLevel < 100 -> "✅ Calidad del aire: Excelente"
-            gasLevel < 300 -> "⚠️ Calidad del aire: Buena"
-            gasLevel < 500 -> "🔶 Calidad del aire: Regular"
-            else -> "🔴 Calidad del aire: Mala"
-        }
     }
 }
