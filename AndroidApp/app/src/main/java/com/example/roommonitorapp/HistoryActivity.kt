@@ -3,6 +3,7 @@ package com.example.roommonitorapp
 import android.os.Bundle
 import android.util.Log
 import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -14,7 +15,6 @@ class HistoryActivity : AppCompatActivity() {
         const val TAG = "HistoryActivity"
     }
 
-    // MISMA base de datos que FirebaseManager
     private val database = FirebaseDatabase
         .getInstance("https://somnosense-default-rtdb.europe-west1.firebasedatabase.app/")
         .getReference("somnosense/data")
@@ -24,6 +24,9 @@ class HistoryActivity : AppCompatActivity() {
 
     private lateinit var titleText: TextView
     private lateinit var listView: ListView
+    private lateinit var mockButton: Button
+
+    private val firebaseManager = FirebaseManager()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +39,7 @@ class HistoryActivity : AppCompatActivity() {
     private fun initializeViews() {
         titleText = findViewById(R.id.tvHistoryTitle)
         listView = findViewById(R.id.listViewHistory)
+        mockButton = findViewById(R.id.btnMock)
 
         adapter = ArrayAdapter(
             this,
@@ -43,6 +47,10 @@ class HistoryActivity : AppCompatActivity() {
             readings
         )
         listView.adapter = adapter
+
+        mockButton.setOnClickListener {
+            firebaseManager.sendMockGasData()
+        }
 
         titleText.text = "📊 Cargando histórico..."
     }
@@ -58,7 +66,7 @@ class HistoryActivity : AppCompatActivity() {
                     if (!snapshot.hasChildren()) {
                         readings.add("📭 No hay datos disponibles aún")
                         readings.add("")
-                        readings.add("💡 Deja la app abierta unos minutos")
+                        readings.add("💡 Pulsa MOCK para insertar datos")
                         adapter.notifyDataSetChanged()
                         titleText.text = "📊 Histórico"
                         return
@@ -68,7 +76,7 @@ class HistoryActivity : AppCompatActivity() {
 
                     snapshot.children
                         .toList()
-                        .reversed() // más reciente primero
+                        .reversed()
                         .forEach { data ->
 
                             try {
@@ -93,15 +101,15 @@ class HistoryActivity : AppCompatActivity() {
                                     ).format(java.util.Date(timestamp))
 
                                 val formattedReading = """
-                                    📅 $formattedDate
+📅 $formattedDate
 
-                                    CO: ${"%.2f".format(co)} ppm
-                                    NO₂: ${"%.2f".format(no2)} ppm
-                                    NH₃: ${"%.2f".format(nh3)} ppm
-                                    CH₄: ${"%.2f".format(ch4)} ppm
-                                    C₂H₅OH: ${"%.2f".format(etoh)} ppm
-                                    ────────────────────
-                                                                    """.trimIndent()
+CO: ${"%.2f".format(co)} ppm
+NO₂: ${"%.2f".format(no2)} ppm
+NH₃: ${"%.2f".format(nh3)} ppm
+CH₄: ${"%.2f".format(ch4)} ppm
+C₂H₅OH: ${"%.2f".format(etoh)} ppm
+────────────────────
+                                """.trimIndent()
 
                                 readings.add(formattedReading)
                                 count++
