@@ -2,6 +2,7 @@ package com.example.roommonitorapp
 
 import android.bluetooth.BluetoothDevice
 import android.os.Bundle
+import android.content.Intent
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -49,6 +50,11 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
                 bluetoothManager.connectToDevice(it)
             }
         }
+
+        findViewById<Button>(R.id.btnHistory).setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
+
 
         updateSensorDisplay()
     }
