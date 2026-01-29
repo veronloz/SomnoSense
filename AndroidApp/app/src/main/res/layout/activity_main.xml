@@ -49,43 +49,54 @@
 
     <!-- Área de datos -->
     <GridLayout
-        android:id="@+id/gasGrid"
+        android:id="@+id/sensorGrid"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:columnCount="2"
-        android:rowCount="3"
-        android:layout_marginTop="16dp"
-        android:useDefaultMargins="true">
+        android:useDefaultMargins="true"
+        android:layout_marginTop="16dp">
 
-        <!-- CO -->
+        <!-- GASES -->
         <TextView
             android:id="@+id/gasCO"
             style="@style/GasCard"
             android:text="CO\n0.00 ppm" />
 
-        <!-- NO2 -->
         <TextView
             android:id="@+id/gasNO2"
             style="@style/GasCard"
             android:text="NO₂\n0.00 ppm" />
 
-        <!-- NH3 -->
         <TextView
             android:id="@+id/gasNH3"
             style="@style/GasCard"
             android:text="NH₃\n0.00 ppm" />
 
-        <!-- CH4 -->
         <TextView
             android:id="@+id/gasCH4"
             style="@style/GasCard"
             android:text="CH₄\n0.00 ppm" />
 
-        <!-- C2H5OH -->
         <TextView
             android:id="@+id/gasETOH"
             style="@style/GasCard"
             android:text="C₂H₅OH\n0.00 ppm" />
+
+        <!-- AMBIENTALES -->
+        <TextView
+            android:id="@+id/cardTemp"
+            style="@style/GasCard"
+            android:text="🌡 Temp\n0.0 °C" />
+
+        <TextView
+            android:id="@+id/cardHum"
+            style="@style/GasCard"
+            android:text="💧 Hum\n0.0 %" />
+
+        <TextView
+            android:id="@+id/cardSound"
+            style="@style/GasCard"
+            android:text="🔊 Sound\n0" />
 
     </GridLayout>
 

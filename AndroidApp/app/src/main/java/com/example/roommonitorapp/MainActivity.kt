@@ -22,6 +22,11 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private lateinit var gasCH4: TextView
     private lateinit var gasETOH: TextView
 
+    private lateinit var cardTemp: TextView
+    private lateinit var cardHum: TextView
+    private lateinit var cardSound: TextView
+
+
     // Managers
     private val bluetoothManager by lazy { BluetoothManager(this) }
     private val firebaseManager by lazy { FirebaseManager() }
@@ -34,6 +39,10 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private var nh3 = 0f
     private var ch4 = 0f
     private var etoh = 0f
+
+    private var temperature = 0f
+    private var humidity = 0f
+    private var soundCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,8 +59,16 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         gasNH3 = findViewById(R.id.gasNH3)
         gasCH4 = findViewById(R.id.gasCH4)
         gasETOH = findViewById(R.id.gasETOH)
+        cardTemp = findViewById(R.id.cardTemp)
+        cardHum = findViewById(R.id.cardHum)
+        cardSound = findViewById(R.id.cardSound)
 
-        // BLE
+        cardTemp.text = "🌡 Temp\n-- °C"
+        cardHum.text = "💧 Hum\n-- %"
+        cardSound.text = "🔊 Sound\n0"
+
+
+
         bluetoothManager.setListener(this)
 
         scanButton.setOnClickListener {
@@ -69,7 +86,6 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
 
-        // Estado inicial
         updateAllGasCards()
     }
 
@@ -104,9 +120,52 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             updateAllGasCards()
         }
 
-        // Enviar a Firebase
         firebaseManager.sendGasData(co, no2, nh3, ch4, etoh)
     }
+
+    private fun updateEnvCard(
+        view: TextView,
+        label: String,
+        value: Float,
+        low: Float,
+        high: Float,
+        unit: String
+    ) {
+        view.text = "$label\n${"%.1f".format(value)} $unit"
+
+        val bg = when {
+            value < low -> R.drawable.bg_gas_warning
+            value <= high -> R.drawable.bg_gas_safe
+            else -> R.drawable.bg_gas_danger
+        }
+        view.setBackgroundResource(bg)
+    }
+
+
+    override fun onEnvDataUpdated(temp: Float, humidity: Float) {
+        this.temperature = temp
+        this.humidity = humidity
+
+        runOnUiThread {
+            updateEnvCard(cardTemp, "🌡 Temp", temp, 18f, 28f, "°C")
+            updateEnvCard(cardHum, "💧 Hum", humidity, 30f, 70f, "%")
+        }
+    }
+
+    override fun onSoundDetected(count: Int) {
+        soundCount = count
+
+        runOnUiThread {
+            cardSound.text = "🔊 Sound\n$count"
+            val bg = when {
+                count < 5 -> R.drawable.bg_gas_safe
+                count < 15 -> R.drawable.bg_gas_warning
+                else -> R.drawable.bg_gas_danger
+            }
+            cardSound.setBackgroundResource(bg)
+        }
+    }
+
 
     override fun onError(message: String) {
         statusText.text = "❌ $message"
