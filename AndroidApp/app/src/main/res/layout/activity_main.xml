@@ -7,6 +7,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginBottom="16dp" />
+
     <!-- Estado de conexión -->
     <TextView
         android:id="@+id/statusText"
@@ -43,38 +48,84 @@
         android:textSize="16sp" />
 
     <!-- Área de datos -->
-    <ScrollView
+    <GridLayout
+        android:id="@+id/gasGrid"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="?android:attr/colorBackgroundFloating"
-        android:elevation="2dp"
-        android:padding="8dp">
+        android:layout_height="wrap_content"
+        android:columnCount="2"
+        android:rowCount="3"
+        android:layout_marginTop="16dp"
+        android:useDefaultMargins="true">
 
+        <!-- CO -->
         <TextView
-            android:id="@+id/dataText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:lineSpacingExtra="4dp"
-            android:padding="16dp"
-            android:text="📊 Los datos del sensor aparecerán aquí..."
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="15sp" />
+            android:id="@+id/gasCO"
+            style="@style/GasCard"
+            android:text="CO\n0.00 ppm" />
 
-    </ScrollView>
+        <!-- NO2 -->
+        <TextView
+            android:id="@+id/gasNO2"
+            style="@style/GasCard"
+            android:text="NO₂\n0.00 ppm" />
 
-    <!-- Botón Ver Histórico -->
-    <Button
-        android:id="@+id/btnHistory"
+        <!-- NH3 -->
+        <TextView
+            android:id="@+id/gasNH3"
+            style="@style/GasCard"
+            android:text="NH₃\n0.00 ppm" />
+
+        <!-- CH4 -->
+        <TextView
+            android:id="@+id/gasCH4"
+            style="@style/GasCard"
+            android:text="CH₄\n0.00 ppm" />
+
+        <!-- C2H5OH -->
+        <TextView
+            android:id="@+id/gasETOH"
+            style="@style/GasCard"
+            android:text="C₂H₅OH\n0.00 ppm" />
+
+    </GridLayout>
+
+
+    <!-- Botones de Historial y Estadísticas -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:padding="16dp"
-        android:text="VER HISTORIAL"
-        android:textAllCaps="false"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:backgroundTint="#4CAF50"
-        android:textColor="#FFFFFF" />
+        android:orientation="horizontal"
+        android:weightSum="2">
+
+        <Button
+            android:id="@+id/btnHistory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:padding="16dp"
+            android:text="VER HISTORIAL"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="#4CAF50"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnStatistics"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:padding="16dp"
+            android:text="ESTADÍSTICAS"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="#2196F3"
+            android:textColor="#FFFFFF" />
+
+    </LinearLayout>
 
 </LinearLayout>

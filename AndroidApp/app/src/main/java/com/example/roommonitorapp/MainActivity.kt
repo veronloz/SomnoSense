@@ -1,6 +1,7 @@
 package com.example.roommonitorapp
 
 import android.bluetooth.BluetoothDevice
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
@@ -8,35 +9,49 @@ import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
 
+    // Estado y control
     private lateinit var statusText: TextView
-    private lateinit var dataText: TextView
     private lateinit var scanButton: Button
     private lateinit var connectButton: Button
+    private lateinit var historyButton: Button
 
+    // Tarjetas de gas
+    private lateinit var gasCO: TextView
+    private lateinit var gasNO2: TextView
+    private lateinit var gasNH3: TextView
+    private lateinit var gasCH4: TextView
+    private lateinit var gasETOH: TextView
+
+    // Managers
     private val bluetoothManager by lazy { BluetoothManager(this) }
     private val firebaseManager by lazy { FirebaseManager() }
 
     private var selectedDevice: BluetoothDevice? = null
 
-    // Gases
+    // Valores actuales
     private var co = 0f
     private var no2 = 0f
     private var nh3 = 0f
     private var ch4 = 0f
     private var etoh = 0f
 
-    // Nombre real de nuestro DEVICE
-    private val TARGET_DEVICE_NAME = "nRF52_Demo"
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Views
         statusText = findViewById(R.id.statusText)
-        dataText = findViewById(R.id.dataText)
         scanButton = findViewById(R.id.scanButton)
         connectButton = findViewById(R.id.connectButton)
+        historyButton = findViewById(R.id.btnHistory)
 
+        gasCO = findViewById(R.id.gasCO)
+        gasNO2 = findViewById(R.id.gasNO2)
+        gasNH3 = findViewById(R.id.gasNH3)
+        gasCH4 = findViewById(R.id.gasCH4)
+        gasETOH = findViewById(R.id.gasETOH)
+
+        // BLE
         bluetoothManager.setListener(this)
 
         scanButton.setOnClickListener {
@@ -50,8 +65,15 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             }
         }
 
-        updateSensorDisplay()
+        historyButton.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
+
+        // Estado inicial
+        updateAllGasCards()
     }
+
+    // ================= BLE CALLBACKS =================
 
     override fun onDevicesFound(devices: List<BluetoothDevice>) {
         selectedDevice = devices.firstOrNull()
@@ -79,9 +101,10 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         this.etoh = etoh
 
         runOnUiThread {
-            updateSensorDisplay()
+            updateAllGasCards()
         }
 
+        // Enviar a Firebase
         firebaseManager.sendGasData(co, no2, nh3, ch4, etoh)
     }
 
@@ -89,18 +112,26 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         statusText.text = "❌ $message"
     }
 
-    private fun updateSensorDisplay() {
-        dataText.text = """
-            🧪 GAS MONITOR
-            
-            CO: ${"%.2f".format(co)} ppm
-            NO₂: ${"%.2f".format(no2)} ppm
-            NH₃: ${"%.2f".format(nh3)} ppm
-            CH₄: ${"%.2f".format(ch4)} ppm
-            C₂H₅OH: ${"%.2f".format(etoh)} ppm
-            
-            Estado: ${if (bluetoothManager.isConnected()) "✅ Conectado" else "❌ Desconectado"}
-            """.trimIndent()
+    // ================= UI HELPERS =================
+
+    private fun updateAllGasCards() {
+        updateGasCard(gasCO, "CO", co)
+        updateGasCard(gasNO2, "NO₂", no2)
+        updateGasCard(gasNH3, "NH₃", nh3)
+        updateGasCard(gasCH4, "CH₄", ch4)
+        updateGasCard(gasETOH, "C₂H₅OH", etoh)
+    }
+
+    private fun updateGasCard(view: TextView, label: String, value: Float) {
+        view.text = "$label\n${"%.2f".format(value)} ppm"
+
+        val background = when {
+            value < 5f -> R.drawable.bg_gas_safe
+            value < 15f -> R.drawable.bg_gas_warning
+            else -> R.drawable.bg_gas_danger
+        }
+
+        view.setBackgroundResource(background)
     }
 
     override fun onDestroy() {

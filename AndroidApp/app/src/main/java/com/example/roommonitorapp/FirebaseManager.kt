@@ -39,4 +39,18 @@ class FirebaseManager {
                 Log.e(TAG, "Error enviando datos a Firebase", e)
             }
     }
+    
+    fun sendMockGasData() {
+        val mockData = mapOf(
+            "co" to (5..15).random() + Math.random(),
+            "no2" to (2..8).random() + Math.random(),
+            "nh3" to (10..25).random() + Math.random(),
+            "ch4" to (5..12).random() + Math.random(),
+            "c2h5oh" to (1..6).random() + Math.random(),
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        firebaseDB.push().setValue(mockData)
+    }
+
 }
