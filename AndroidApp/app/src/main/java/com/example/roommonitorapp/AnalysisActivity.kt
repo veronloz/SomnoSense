@@ -22,7 +22,8 @@ class AnalysisActivity : AppCompatActivity() {
 
     private val database = FirebaseDatabase.getInstance("https://somnosense-default-rtdb.europe-west1.firebasedatabase.app/")
         .getReference("somnosense/data")
-    private val functions = FirebaseFunctions.getInstance()
+    private val functions = FirebaseFunctions.getInstance("europe-west1")
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,7 +90,7 @@ class AnalysisActivity : AppCompatActivity() {
             for (child in snapshot.children) {
                 // Pulling temperature for the evolution graph
                 val env = child.child("environment")
-                val temp = env.child("temp").getValue(Float::class.java) ?: 0f
+                val temp = env.child("temp").getValue(Double::class.java)?.toFloat() ?: 0f
                 tempEntries.add(Entry(index, temp))
                 index++
             }
