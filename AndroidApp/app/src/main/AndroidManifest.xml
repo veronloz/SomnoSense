@@ -56,7 +56,15 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
+        <!-- Activity de Statistics -->
+        <activity
+            android:name=".AnalysisActivity"
+            android:exported="false" />
 
     </application>
+
+    <queries>
+        <package android:name="com.google.android.gms" />
+    </queries>
 
 </manifest>

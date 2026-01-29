@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private lateinit var scanButton: Button
     private lateinit var connectButton: Button
     private lateinit var historyButton: Button
+    private lateinit var statisticsButton: Button
 
     // Tarjetas de gas
     private lateinit var gasCO: TextView

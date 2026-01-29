@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
+
 }
 
 android {
@@ -57,6 +58,14 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.androidx.bluetooth)
     implementation(libs.androidthings)
+    // Added for statistics
+    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
+    implementation("com.google.firebase:firebase-common")
+    implementation("com.google.firebase:firebase-database")
+    implementation("com.google.firebase:firebase-functions")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    //
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
