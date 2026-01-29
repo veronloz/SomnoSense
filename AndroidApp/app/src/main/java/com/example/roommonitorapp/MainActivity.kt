@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         scanButton = findViewById(R.id.scanButton)
         connectButton = findViewById(R.id.connectButton)
         historyButton = findViewById(R.id.btnHistory)
+        statisticsButton = findViewById(R.id.btnStatistics)
 
         gasCO = findViewById(R.id.gasCO)
         gasNO2 = findViewById(R.id.gasNO2)
@@ -66,8 +67,6 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         cardTemp.text = "🌡 Temp\n-- °C"
         cardHum.text = "💧 Hum\n-- %"
         cardSound.text = "🔊 Sound\n0"
-
-
 
         bluetoothManager.setListener(this)
 
@@ -84,6 +83,12 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
 
         historyButton.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
+        }
+
+        statisticsButton.setOnClickListener {
+            // Change "AnalysisActivity" to whatever you named your new screen
+            val intent = Intent(this, AnalysisActivity::class.java)
+            startActivity(intent)
         }
 
         updateAllGasCards()
