@@ -14,6 +14,31 @@ class FirebaseManager {
         .getInstance("https://somnosense-default-rtdb.europe-west1.firebasedatabase.app/")
         .getReference("somnosense/data")
 
+    fun sendSensorData(
+        co: Float, no2: Float, nh3: Float, ch4: Float, etoh: Float,
+        temp: Float, hum: Float, sound: Int
+    ) {
+        val data = mapOf(
+            "gas" to mapOf(
+                "co" to co,
+                "no2" to no2,
+                "nh3" to nh3,
+                "ch4" to ch4,
+                "c2h5oh" to etoh
+            ),
+            "environment" to mapOf(
+                "temp" to temp,
+                "humidity" to hum
+            ),
+            "sound" to sound,
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        firebaseDB.push().setValue(data)
+            .addOnSuccessListener { Log.d(TAG, "Full sensor packet sent") }
+            .addOnFailureListener { e -> Log.e(TAG, "Error sending packet", e) }
+    }
+
     fun sendGasData(
         co: Float,
         no2: Float,

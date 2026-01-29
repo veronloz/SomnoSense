@@ -150,6 +150,8 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             updateEnvCard(cardTemp, "🌡 Temp", temp, 18f, 28f, "°C")
             updateEnvCard(cardHum, "💧 Hum", humidity, 30f, 70f, "%")
         }
+
+        firebaseManager.sendSensorData(co, no2, nh3, ch4, etoh, temperature, humidity, soundCount)
     }
 
     override fun onSoundDetected(count: Int) {
