@@ -9,14 +9,12 @@ import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
 
-    // Estado y control
     private lateinit var statusText: TextView
     private lateinit var scanButton: Button
     private lateinit var connectButton: Button
     private lateinit var historyButton: Button
     private lateinit var statisticsButton: Button
 
-    // Tarjetas de gas
     private lateinit var gasCO: TextView
     private lateinit var gasNO2: TextView
     private lateinit var gasNH3: TextView
@@ -27,14 +25,11 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private lateinit var cardHum: TextView
     private lateinit var cardSound: TextView
 
-
-    // Managers
     private val bluetoothManager by lazy { BluetoothManager(this) }
     private val firebaseManager by lazy { FirebaseManager() }
 
     private var selectedDevice: BluetoothDevice? = null
 
-    // Valores actuales
     private var co = 0f
     private var no2 = 0f
     private var nh3 = 0f
@@ -49,7 +44,6 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Views
         statusText = findViewById(R.id.statusText)
         scanButton = findViewById(R.id.scanButton)
         connectButton = findViewById(R.id.connectButton)
@@ -61,6 +55,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         gasNH3 = findViewById(R.id.gasNH3)
         gasCH4 = findViewById(R.id.gasCH4)
         gasETOH = findViewById(R.id.gasETOH)
+
         cardTemp = findViewById(R.id.cardTemp)
         cardHum = findViewById(R.id.cardHum)
         cardSound = findViewById(R.id.cardSound)
@@ -77,9 +72,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         }
 
         connectButton.setOnClickListener {
-            selectedDevice?.let {
-                bluetoothManager.connectToDevice(it)
-            }
+            selectedDevice?.let { bluetoothManager.connectToDevice(it) }
         }
 
         historyButton.setOnClickListener {
@@ -87,9 +80,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         }
 
         statisticsButton.setOnClickListener {
-            // Change "AnalysisActivity" to whatever you named your new screen
-            val intent = Intent(this, AnalysisActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, AnalysisActivity::class.java))
         }
 
         updateAllGasCards()
@@ -125,28 +116,8 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         runOnUiThread {
             updateAllGasCards()
         }
-
-        firebaseManager.sendGasData(co, no2, nh3, ch4, etoh)
+        // ❌ NO Firebase aquí
     }
-
-    private fun updateEnvCard(
-        view: TextView,
-        label: String,
-        value: Float,
-        low: Float,
-        high: Float,
-        unit: String
-    ) {
-        view.text = "$label\n${"%.1f".format(value)} $unit"
-
-        val bg = when {
-            value < low -> R.drawable.bg_gas_warning
-            value <= high -> R.drawable.bg_gas_safe
-            else -> R.drawable.bg_gas_danger
-        }
-        view.setBackgroundResource(bg)
-    }
-
 
     override fun onEnvDataUpdated(temp: Float, humidity: Float) {
         this.temperature = temp
@@ -157,7 +128,12 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
             updateEnvCard(cardHum, "💧 Hum", humidity, 30f, 70f, "%")
         }
 
-        firebaseManager.sendSensorData(co, no2, nh3, ch4, etoh, temperature, humidity, soundCount)
+        // ✅ ÚNICO punto de escritura en Firebase
+        firebaseManager.sendSensorData(
+            co, no2, nh3, ch4, etoh,
+            temperature, humidity,
+            soundCount
+        )
     }
 
     override fun onSoundDetected(count: Int) {
@@ -165,15 +141,8 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
 
         runOnUiThread {
             cardSound.text = "🔊 Sound\n$count"
-            val bg = when {
-                count < 5 -> R.drawable.bg_gas_safe
-                count < 15 -> R.drawable.bg_gas_warning
-                else -> R.drawable.bg_gas_danger
-            }
-            cardSound.setBackgroundResource(bg)
         }
     }
-
 
     override fun onError(message: String) {
         statusText.text = "❌ $message"
@@ -191,14 +160,17 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
 
     private fun updateGasCard(view: TextView, label: String, value: Float) {
         view.text = "$label\n${"%.2f".format(value)} ppm"
+    }
 
-        val background = when {
-            value < 5f -> R.drawable.bg_gas_safe
-            value < 15f -> R.drawable.bg_gas_warning
-            else -> R.drawable.bg_gas_danger
-        }
-
-        view.setBackgroundResource(background)
+    private fun updateEnvCard(
+        view: TextView,
+        label: String,
+        value: Float,
+        low: Float,
+        high: Float,
+        unit: String
+    ) {
+        view.text = "$label\n${"%.1f".format(value)} $unit"
     }
 
     override fun onDestroy() {
