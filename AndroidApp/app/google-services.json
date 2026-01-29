@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "949193936233",
+    "firebase_url": "https://somnosense-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "somnosense",
     "storage_bucket": "somnosense.firebasestorage.app"
   },
