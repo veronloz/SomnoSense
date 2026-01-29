@@ -62,8 +62,12 @@ class BluetoothManager(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun connectToDevice(device: BluetoothDevice) {
         Log.d("BLE_DEBUG", "Attempting connection to: ${device.address}")
-        
+
+        // 1. Force a complete stop of everything else
+        stopScan()
+
         gatt?.let {
+            Log.d("BLE_DEBUG", "Closing existing GATT before new connection")
             it.disconnect()
             it.close()
             gatt = null
@@ -78,7 +82,7 @@ class BluetoothManager(private val context: Context) {
             } else {
                 device.connectGatt(context, false, gattCallback)
             }
-        }, 500)
+        }, 1000)
     }
 
     @SuppressLint("MissingPermission")
