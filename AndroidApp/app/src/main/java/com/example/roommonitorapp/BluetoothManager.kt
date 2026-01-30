@@ -33,7 +33,7 @@ class BluetoothManager(private val context: Context) {
     private var isConnected = false
     private var isScanning = false
 
-    // UUIDs EXACTOS del firmware Zephyr
+    // UUIDs EXACTOS
     private val SERVICE_UUID = UUID.fromString("47617353-656e-736f-7253-766300000000")
     private val GAS_CHAR_UUID = UUID.fromString("47617352-6561-6469-6e67-730000000000")
     private val ENV_CHAR_UUID = UUID.fromString("456e7669-726f-6e6d-656e-740000000000")

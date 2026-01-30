@@ -42,7 +42,7 @@ class FirebaseManager {
             }
     }
 
-    // ⚠️ SOLO para pruebas (mismo esquema)
+    //SOLO para pruebas (mismo esquema)
     fun sendMockData() {
         val mockData = mapOf(
             "gas" to mapOf(
