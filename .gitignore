@@ -1,0 +1,27 @@
+# Gradle
+AndroidApp/gradle/
+AndroidApp/build/
+
+# Android Studio
+AndroidApp.idea/
+
+# Local configuration
+local.properties
+
+# Firebase config (important!)
+app/google-services.json
+
+# JetBrains
+.idea
+
+# .pio
+Firmware_nRF52-840-DK.pio/
+
+# Firebase terminal config
+Cloud/firebase-tools-instant-win.exe
+Cloud/functions/venv
+Cloud/functions/_pycache_/
+
+# CloudLocal
+CloudLocal/.venv/
+CloudLocal/osfstorage-archive

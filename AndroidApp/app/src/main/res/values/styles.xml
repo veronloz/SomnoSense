@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ========================= -->
+    <!-- Tema principal de la app -->
+    <!-- ========================= -->
+    <style name="Theme.RoomMonitorApp" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Colores básicos -->
+        <item name="colorPrimary">#2196F3</item>
+        <item name="colorPrimaryDark">#1976D2</item>
+        <item name="colorAccent">#4CAF50</item>
+
+        <!-- Fondo general -->
+        <item name="android:windowBackground">?android:attr/windowBackground</item>
+    </style>
+
+    <!-- ================================= -->
+    <!-- Estilo reutilizable para gas cards -->
+    <!-- ================================= -->
+    <style name="GasCard">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">100dp</item>
+        <item name="android:layout_columnWeight">1</item>
+
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@android:color/white</item>
+
+        <item name="android:padding">12dp</item>
+        <item name="android:background">@drawable/bg_gas_safe</item>
+    </style>
+
+</resources>

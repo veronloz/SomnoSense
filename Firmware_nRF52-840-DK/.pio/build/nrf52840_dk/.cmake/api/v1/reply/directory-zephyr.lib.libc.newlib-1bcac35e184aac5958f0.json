@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "zephyr/lib/libc/newlib",
+		"source" : "C:/Users/eferr/.platformio/packages/framework-zephyr/lib/libc/newlib"
+	}
+}

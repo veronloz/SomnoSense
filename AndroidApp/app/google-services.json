@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "949193936233",
+    "firebase_url": "https://somnosense-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "somnosense",
+    "storage_bucket": "somnosense.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:949193936233:android:955fce4cc0bd742c0a41f8",
+        "android_client_info": {
+          "package_name": "com.example.roommonitorapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDI2wFvqIzkFDG2NwYn95JCjZxo6stWgsU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

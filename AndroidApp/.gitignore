@@ -1,0 +1,9 @@
+# JetBrains / Android Studio
+.idea/
+*.iml
+.gradle/
+local.properties
+
+# Build outputs
+**/build/
+[.gradle](http://_vscodecontentref_/3)
