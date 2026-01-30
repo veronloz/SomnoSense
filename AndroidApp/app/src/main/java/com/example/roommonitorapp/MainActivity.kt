@@ -13,7 +13,9 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
     private lateinit var scanButton: Button
     private lateinit var connectButton: Button
     private lateinit var historyButton: Button
+
     private lateinit var statisticsButton: Button
+    private lateinit var localStatisticsButton: Button
 
     private lateinit var gasCO: TextView
     private lateinit var gasNO2: TextView
@@ -49,6 +51,7 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
         connectButton = findViewById(R.id.connectButton)
         historyButton = findViewById(R.id.btnHistory)
         statisticsButton = findViewById(R.id.btnStatistics)
+        localStatisticsButton = findViewById(R.id.btnLocalStatistics)
 
         gasCO = findViewById(R.id.gasCO)
         gasNO2 = findViewById(R.id.gasNO2)
@@ -81,6 +84,10 @@ class MainActivity : AppCompatActivity(), BluetoothManager.BluetoothListener {
 
         statisticsButton.setOnClickListener {
             startActivity(Intent(this, AnalysisActivity::class.java))
+        }
+
+        localStatisticsButton.setOnClickListener {
+            startActivity(Intent(this, LocalAnalysis::class.java))
         }
 
         updateAllGasCards()

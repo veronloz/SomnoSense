@@ -106,8 +106,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:orientation="horizontal"
-        android:weightSum="2">
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btnHistory"
@@ -116,7 +115,7 @@
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             android:padding="16dp"
-            android:text="VER HISTORIAL"
+            android:text="HISTORY"
             android:textAllCaps="false"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -130,11 +129,25 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:padding="16dp"
-            android:text="ESTADÍSTICAS"
+            android:text="STATS"
             android:textAllCaps="false"
             android:textSize="16sp"
             android:textStyle="bold"
             android:backgroundTint="#2196F3"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnLocalStatistics"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:padding="16dp"
+            android:text="LOCAL"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="#CDFF5722"
             android:textColor="#FFFFFF" />
 
     </LinearLayout>
