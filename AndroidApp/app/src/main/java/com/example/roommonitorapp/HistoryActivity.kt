@@ -49,7 +49,8 @@ class HistoryActivity : AppCompatActivity() {
         listView.adapter = adapter
 
         mockButton.setOnClickListener {
-            firebaseManager.sendMockGasData()
+            //SOLO para pruebas
+            firebaseManager.sendMockData()
         }
 
         titleText.text = "📊 Cargando histórico..."
@@ -80,19 +81,28 @@ class HistoryActivity : AppCompatActivity() {
                         .forEach { data ->
 
                             try {
-                                val timestamp =
-                                    data.child("timestamp").getValue(Long::class.java) ?: 0L
+                                // ⛔ Ignorar nodos antiguos rotos
+                                if (!data.child("gas").exists() ||
+                                    !data.child("environment").exists()
+                                ) return@forEach
 
-                                val co =
-                                    data.child("co").getValue(Double::class.java) ?: 0.0
-                                val no2 =
-                                    data.child("no2").getValue(Double::class.java) ?: 0.0
-                                val nh3 =
-                                    data.child("nh3").getValue(Double::class.java) ?: 0.0
-                                val ch4 =
-                                    data.child("ch4").getValue(Double::class.java) ?: 0.0
-                                val etoh =
-                                    data.child("c2h5oh").getValue(Double::class.java) ?: 0.0
+                                val timestamp =
+                                    data.child("timestamp").getValue(Long::class.java) ?: return@forEach
+
+                                val gas = data.child("gas")
+                                val env = data.child("environment")
+
+                                val co = gas.child("co").getValue(Double::class.java) ?: 0.0
+                                val no2 = gas.child("no2").getValue(Double::class.java) ?: 0.0
+                                val nh3 = gas.child("nh3").getValue(Double::class.java) ?: 0.0
+                                val ch4 = gas.child("ch4").getValue(Double::class.java) ?: 0.0
+                                val etoh = gas.child("c2h5oh").getValue(Double::class.java) ?: 0.0
+
+                                val temp = env.child("temp").getValue(Double::class.java) ?: 0.0
+                                val hum = env.child("humidity").getValue(Double::class.java) ?: 0.0
+
+                                val sound =
+                                    data.child("sound").getValue(Int::class.java) ?: 0
 
                                 val formattedDate =
                                     java.text.SimpleDateFormat(
@@ -102,6 +112,10 @@ class HistoryActivity : AppCompatActivity() {
 
                                 val formattedReading = """
 📅 $formattedDate
+
+🌡 Temp: ${"%.1f".format(temp)} °C
+💧 Hum: ${"%.1f".format(hum)} %
+🔊 Sound: $sound
 
 CO: ${"%.2f".format(co)} ppm
 NO₂: ${"%.2f".format(no2)} ppm
@@ -121,7 +135,6 @@ C₂H₅OH: ${"%.2f".format(etoh)} ppm
 
                     adapter.notifyDataSetChanged()
                     titleText.text = "📊 Histórico ($count registros)"
-
                     Log.d(TAG, "Cargados $count registros")
                 }
 

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/tvSleepScore"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Puntaje de Sueño: --"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#673AB7" />
+
+        <Button
+            android:id="@+id/btnRefreshAnalysis"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="16dp"
+            android:text="🔄 Recalcular Análisis"
+            android:backgroundTint="#673AB7"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Evolución de Temperatura (Últimas 1000)"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- The Chart View -->
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/lineChart"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:background="#FFFFFF"
+            android:elevation="2dp" />
+
+        <TextView
+            android:id="@+id/tvAnalysisDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:lineSpacingExtra="4dp"
+            android:textSize="16sp"
+            android:text="Cargando detalles..." />
+
+    </LinearLayout>
+</ScrollView>

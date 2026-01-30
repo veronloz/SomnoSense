@@ -11,6 +11,11 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginBottom="16dp" />
+
         <TextView
             android:id="@+id/tvHistoryTitle"
             android:layout_width="match_parent"
