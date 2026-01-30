@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
-
 }
 
 android {
@@ -59,7 +58,7 @@ dependencies {
     implementation(libs.androidx.bluetooth)
     implementation(libs.androidthings)
     // Added for statistics
-    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
     implementation("com.google.firebase:firebase-common")
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-functions")
